@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privon — Private Live Chat</title>
+    <title>Privon — Private Messenger</title>
     <script type="importmap">
         {
             "imports": {
                 "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
                 "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+                "firebase/storage": "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"
             }
         }
     </script>
@@ -43,18 +44,16 @@
             width: 100%;
             max-width: 400px;
             border: 1px solid #334155;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         .logo {
             font-size: 36px;
             font-weight: bold;
             text-align: center;
-            margin-bottom: 8px;
             background: linear-gradient(135deg, #FFFFFF, #3B82F6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 8px;
         }
 
         .tagline {
@@ -64,7 +63,7 @@
             margin-bottom: 32px;
         }
 
-        input {
+        input, textarea {
             width: 100%;
             padding: 14px 16px;
             background: #0F172A;
@@ -74,12 +73,10 @@
             font-size: 16px;
             margin-bottom: 16px;
             outline: none;
-            transition: all 0.3s;
         }
 
-        input:focus {
+        input:focus, textarea:focus {
             border-color: #3B82F6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
 
         button {
@@ -93,7 +90,6 @@
             font-weight: bold;
             cursor: pointer;
             margin-bottom: 12px;
-            transition: background 0.3s;
         }
 
         button:hover {
@@ -113,26 +109,6 @@
             text-align: center;
             color: #64748B;
             margin: 16px 0;
-            font-size: 14px;
-            position: relative;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            width: 45%;
-            height: 1px;
-            background: #334155;
-        }
-
-        .divider::before {
-            left: 0;
-        }
-
-        .divider::after {
-            right: 0;
         }
 
         .error {
@@ -144,47 +120,187 @@
 
         .success {
             color: #22C55E;
-            font-size: 14px;
-            text-align: center;
-            margin-top: 12px;
         }
 
-        /* Chat Section */
-        .chat-container {
+        .hidden {
+            display: none;
+        }
+
+        /* Main App */
+        .app-container {
             display: none;
             height: 100vh;
             flex-direction: column;
         }
 
-        .chat-header {
+        /* Top Bar */
+        .top-bar {
             background: #1E293B;
-            padding: 16px 20px;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #334155;
         }
 
-        .chat-header h2 {
+        .top-bar .logo-small {
             font-size: 20px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .chat-header .username {
-            color: #3B82F6;
+        .top-bar-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
 
-        .logout-btn {
-            background: #EF4444;
+        .top-bar button {
             width: auto;
             padding: 8px 16px;
             margin: 0;
+            font-size: 14px;
         }
 
-        .logout-btn:hover {
-            background: #DC2626;
+        .username-badge {
+            background: #0F172A;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
         }
 
-        .messages-area {
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #0F172A;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #1E293B;
+            transition: background 0.2s;
+        }
+
+        .sidebar-tab:hover {
+            background: #1E293B;
+        }
+
+        .sidebar-tab.active {
+            background: #1E293B;
+            border-left: 3px solid #3B82F6;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 16px 20px;
+            background: #1E293B;
+            border-bottom: 1px solid #334155;
+        }
+
+        .content-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Search */
+        .search-box {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .search-box button {
+            width: auto;
+            padding: 14px 20px;
+            margin: 0;
+        }
+
+        /* User Cards */
+        .user-card {
+            background: #1E293B;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-card .username {
+            font-weight: bold;
+        }
+
+        .user-card .email {
+            font-size: 12px;
+            color: #94A3B8;
+        }
+
+        .user-card button {
+            width: auto;
+            padding: 8px 16px;
+            margin: 0;
+            font-size: 12px;
+        }
+
+        .request-card {
+            background: #1E293B;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .request-card .request-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .request-card button {
+            width: auto;
+            padding: 6px 12px;
+            margin: 0;
+            font-size: 12px;
+        }
+
+        .accept-btn {
+            background: #22C55E;
+        }
+
+        .reject-btn {
+            background: #EF4444;
+        }
+
+        /* Chat Area */
+        .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
@@ -197,25 +313,16 @@
             max-width: 70%;
             padding: 10px 14px;
             border-radius: 18px;
-            word-wrap: break-word;
         }
 
         .message.sent {
             background: #3B82F6;
             align-self: flex-end;
-            border-bottom-right-radius: 4px;
         }
 
         .message.received {
             background: #1E293B;
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message .sender {
-            font-size: 11px;
-            color: #94A3B8;
-            margin-bottom: 4px;
         }
 
         .message .text {
@@ -226,10 +333,16 @@
             font-size: 10px;
             color: #94A3B8;
             margin-top: 4px;
-            text-align: right;
         }
 
-        .input-area {
+        .message-img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .chat-input-area {
             background: #1E293B;
             padding: 16px;
             display: flex;
@@ -237,55 +350,51 @@
             border-top: 1px solid #334155;
         }
 
-        .input-area input {
+        .chat-input-area input {
             margin-bottom: 0;
             flex: 1;
         }
 
-        .input-area button {
+        .chat-input-area button {
             width: auto;
             padding: 14px 24px;
             margin: 0;
         }
 
-        .online-count {
-            font-size: 12px;
-            color: #22C55E;
-            margin-top: 4px;
-        }
-
-        .loading {
-            text-align: center;
-            color: #94A3B8;
-            padding: 20px;
-        }
-
-        .welcome {
-            text-align: center;
-            padding: 20px;
-            color: #94A3B8;
-        }
-
-        /* Switch between login/signup */
-        .switch-mode {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 14px;
-            color: #94A3B8;
-        }
-
-        .switch-mode a {
-            color: #3B82F6;
-            text-decoration: none;
+        .file-label {
+            background: #3B82F6;
+            padding: 14px 20px;
+            border-radius: 12px;
             cursor: pointer;
         }
 
-        .switch-mode a:hover {
-            text-decoration: underline;
+        .empty-state {
+            text-align: center;
+            color: #94A3B8;
+            padding: 40px;
         }
 
-        .hidden {
-            display: none;
+        /* Settings */
+        .setting-item {
+            background: #1E293B;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .delete-btn {
+            background: #EF4444;
+            margin-top: 20px;
+        }
+
+        .delete-btn:hover {
+            background: #DC2626;
         }
     </style>
 </head>
@@ -297,80 +406,75 @@
         <div class="logo">PRIVON</div>
         <div class="tagline">No phone number. Just privacy.</div>
 
-        <!-- Login Form -->
         <div id="loginForm">
             <input type="email" id="loginEmail" placeholder="Email">
             <input type="password" id="loginPassword" placeholder="Password">
             <button id="loginBtn">Login →</button>
-            <div class="switch-mode">
-                New user? <a id="showSignupLink">Create account</a>
-            </div>
+            <div class="divider">New user? <a id="showSignupLink" style="color:#3B82F6; cursor:pointer;">Create account</a></div>
         </div>
 
-        <!-- Signup Form (hidden by default) -->
         <div id="signupForm" class="hidden">
             <input type="text" id="signupUsername" placeholder="Username (e.g., @alex)">
             <input type="email" id="signupEmail" placeholder="Email">
             <input type="password" id="signupPassword" placeholder="Password (min 6 chars)">
             <button id="signupBtn">Create Account →</button>
-            <div class="switch-mode">
-                Already have account? <a id="showLoginLink">Login</a>
-            </div>
+            <div class="divider">Already have account? <a id="showLoginLink" style="color:#3B82F6; cursor:pointer;">Login</a></div>
         </div>
 
         <div class="divider">or</div>
-
         <button id="googleBtn" class="google-btn">Continue with Google</button>
         <div id="authError" class="error"></div>
     </div>
 </div>
 
-<!-- CHAT SECTION -->
-<div id="chatSection" class="chat-container">
-    <div class="chat-header">
-        <div>
-            <h2>💬 Convos</h2>
-            <div id="onlineStatus" class="online-count">● Connecting...</div>
-        </div>
-        <div>
-            <span id="currentUser" class="username"></span>
-            <button id="logoutBtn" class="logout-btn">Leave</button>
+<!-- MAIN APP -->
+<div id="appContainer" class="app-container">
+    <div class="top-bar">
+        <div class="logo-small">PRIVON</div>
+        <div class="top-bar-right">
+            <span id="navUsername" class="username-badge"></span>
+            <button id="logoutBtn">Leave</button>
         </div>
     </div>
-    <div id="messagesArea" class="messages-area">
-        <div class="loading">Loading messages...</div>
-    </div>
-    <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Type a message...">
-        <button id="sendBtn">Send</button>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-tab" data-tab="convos">
+                💬 Convos
+            </div>
+            <div class="sidebar-tab" data-tab="peps">
+                👥 Peps
+            </div>
+            <div class="sidebar-tab" data-tab="search">
+                🔍 Search
+            </div>
+            <div class="sidebar-tab" data-tab="requests">
+                📬 Requests
+            </div>
+            <div class="sidebar-tab" data-tab="settings">
+                ⚙️ Controls
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div id="contentHeader" class="content-header">
+                <h2>Convos</h2>
+            </div>
+            <div id="contentBody" class="content-body">
+                <div class="empty-state">Select a conversation to start chatting</div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "firebase/app";
-    import { 
-        getAuth, 
-        createUserWithEmailAndPassword, 
-        signInWithEmailAndPassword, 
-        signInWithPopup, 
-        GoogleAuthProvider, 
-        signOut, 
-        onAuthStateChanged 
-    } from "firebase/auth";
-    import { 
-        getFirestore, 
-        collection, 
-        addDoc, 
-        query, 
-        orderBy, 
-        onSnapshot, 
-        serverTimestamp,
-        doc,
-        setDoc,
-        getDoc
-    } from "firebase/firestore";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-    // Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyDdC1U5W38AtRzwyxc5JWdWLR67SR1rLx0",
         authDomain: "privon-web-chat.firebaseapp.com",
@@ -380,34 +484,33 @@
         appId: "1:487526066785:web:80ba45988afd4f3a7ad820"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
     const googleProvider = new GoogleAuthProvider();
+
+    let currentUser = null;
+    let currentChatUser = null;
+    let unsubscribeMessages = null;
 
     // DOM Elements
     const authSection = document.getElementById('authSection');
-    const chatSection = document.getElementById('chatSection');
+    const appContainer = document.getElementById('appContainer');
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
-    const showSignupLink = document.getElementById('showSignupLink');
-    const showLoginLink = document.getElementById('showLoginLink');
     const loginBtn = document.getElementById('loginBtn');
     const signupBtn = document.getElementById('signupBtn');
     const googleBtn = document.getElementById('googleBtn');
     const authError = document.getElementById('authError');
     const logoutBtn = document.getElementById('logoutBtn');
-    const messagesArea = document.getElementById('messagesArea');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const onlineStatus = document.getElementById('onlineStatus');
-    const currentUserSpan = document.getElementById('currentUser');
+    const navUsername = document.getElementById('navUsername');
+    const contentHeader = document.getElementById('contentHeader');
+    const contentBody = document.getElementById('contentBody');
+    const showSignupLink = document.getElementById('showSignupLink');
+    const showLoginLink = document.getElementById('showLoginLink');
 
-    let currentUserData = null;
-    let unsubscribeMessages = null;
-
-    // Toggle between login and signup forms
+    // Toggle forms
     showSignupLink.addEventListener('click', () => {
         loginForm.classList.add('hidden');
         signupForm.classList.remove('hidden');
@@ -420,25 +523,403 @@
         authError.textContent = '';
     });
 
-    // Save username to Firestore
-    async function saveUsernameToFirestore(userId, username) {
+    // Save user to Firestore
+    async function saveUserToFirestore(userId, email, username) {
         await setDoc(doc(db, 'users', userId), {
+            email: email,
             username: username,
-            email: auth.currentUser?.email,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            friends: []
         }, { merge: true });
     }
 
-    // Get username from Firestore
-    async function getUsernameFromFirestore(userId) {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (userDoc.exists()) {
-            return userDoc.data().username;
+    // Get user by username
+    async function getUserByUsername(username) {
+        const q = query(collection(db, 'users'), where('username', '==', username));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() };
         }
         return null;
     }
 
-    // Sign Up
+    // Get user by ID
+    async function getUserById(userId) {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+            return { id: userDoc.id, ...userDoc.data() };
+        }
+        return null;
+    }
+
+    // Send friend request
+    async function sendFriendRequest(toUserId) {
+        await setDoc(doc(db, 'friendRequests', `${currentUser.uid}_${toUserId}`), {
+            fromUserId: currentUser.uid,
+            fromUsername: currentUser.username,
+            toUserId: toUserId,
+            status: 'pending',
+            createdAt: serverTimestamp()
+        });
+    }
+
+    // Accept friend request
+    async function acceptFriendRequest(requestId, fromUserId, toUserId) {
+        // Add to friends lists
+        await updateDoc(doc(db, 'users', fromUserId), {
+            friends: arrayUnion(toUserId)
+        });
+        await updateDoc(doc(db, 'users', toUserId), {
+            friends: arrayUnion(fromUserId)
+        });
+        // Delete request
+        await deleteDoc(doc(db, 'friendRequests', requestId));
+    }
+
+    // Reject friend request
+    async function rejectFriendRequest(requestId) {
+        await deleteDoc(doc(db, 'friendRequests', requestId));
+    }
+
+    // Send message
+    async function sendMessage(toUserId, text, imageUrl = null) {
+        const chatId = [currentUser.uid, toUserId].sort().join('_');
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+            text: text,
+            imageUrl: imageUrl,
+            senderId: currentUser.uid,
+            senderName: currentUser.username,
+            timestamp: serverTimestamp()
+        });
+    }
+
+    // Upload image
+    async function uploadImage(file) {
+        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        return await getDownloadURL(storageRef);
+    }
+
+    // Load conversations list
+    async function loadConvosList() {
+        contentHeader.innerHTML = '<h2>Convos</h2>';
+        contentBody.innerHTML = '<div class="empty-state">Loading...</div>';
+
+        const friends = currentUser.friends || [];
+        if (friends.length === 0) {
+            contentBody.innerHTML = '<div class="empty-state">No conversations yet. Add friends to start chatting!</div>';
+            return;
+        }
+
+        let html = '';
+        for (const friendId of friends) {
+            const friend = await getUserById(friendId);
+            if (friend) {
+                html += `
+                    <div class="user-card" data-userid="${friend.id}" data-username="${friend.username}">
+                        <div>
+                            <div class="username">${friend.username}</div>
+                            <div class="email">${friend.email}</div>
+                        </div>
+                        <button class="chat-btn">Chat</button>
+                    </div>
+                `;
+            }
+        }
+        contentBody.innerHTML = html;
+
+        document.querySelectorAll('.chat-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const card = btn.closest('.user-card');
+                const userId = card.dataset.userid;
+                const username = card.dataset.username;
+                openChat(userId, username);
+            });
+        });
+    }
+
+    // Open chat with user
+    function openChat(userId, username) {
+        currentChatUser = { id: userId, username: username };
+        contentHeader.innerHTML = `<h2>Chat with ${username}</h2><button id="backToConvos" style="width:auto; padding:6px 12px; margin-left:12px;">← Back</button>`;
+        
+        document.getElementById('backToConvos')?.addEventListener('click', () => {
+            loadConvosList();
+            if (unsubscribeMessages) unsubscribeMessages();
+            currentChatUser = null;
+        });
+
+        contentBody.innerHTML = `
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-area">
+                <label class="file-label">📎
+                    <input type="file" id="imageInput" accept="image/*" style="display:none">
+                </label>
+                <input type="text" id="chatMessageInput" placeholder="Type a message...">
+                <button id="sendChatBtn">Send</button>
+            </div>
+        `;
+
+        const chatId = [currentUser.uid, userId].sort().join('_');
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+        if (unsubscribeMessages) unsubscribeMessages();
+        unsubscribeMessages = onSnapshot(q, (snapshot) => {
+            const messagesDiv = document.getElementById('chatMessages');
+            if (!messagesDiv) return;
+            messagesDiv.innerHTML = '';
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                
+                if (msg.imageUrl) {
+                    const img = document.createElement('img');
+                    img.src = msg.imageUrl;
+                    img.className = 'message-img';
+                    img.addEventListener('click', () => window.open(msg.imageUrl));
+                    msgDiv.appendChild(img);
+                }
+                if (msg.text) {
+                    const textSpan = document.createElement('div');
+                    textSpan.className = 'text';
+                    textSpan.textContent = msg.text;
+                    msgDiv.appendChild(textSpan);
+                }
+                const timeSpan = document.createElement('div');
+                timeSpan.className = 'time';
+                if (msg.timestamp) {
+                    timeSpan.textContent = msg.timestamp.toDate().toLocaleTimeString();
+                }
+                msgDiv.appendChild(timeSpan);
+                messagesDiv.appendChild(msgDiv);
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+
+        const sendBtn = document.getElementById('sendChatBtn');
+        const messageInput = document.getElementById('chatMessageInput');
+        const imageInput = document.getElementById('imageInput');
+
+        sendBtn.addEventListener('click', async () => {
+            const text = messageInput.value.trim();
+            if (text) {
+                await sendMessage(userId, text);
+                messageInput.value = '';
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const imageUrl = await uploadImage(file);
+                await sendMessage(userId, '', imageUrl);
+                imageInput.value = '';
+            }
+        });
+    }
+
+    // Load Peps (friends)
+    async function loadPeps() {
+        contentHeader.innerHTML = '<h2>👥 Peps</h2>';
+        const friends = currentUser.friends || [];
+        if (friends.length === 0) {
+            contentBody.innerHTML = '<div class="empty-state">No friends yet. Search and add people!</div>';
+            return;
+        }
+
+        let html = '';
+        for (const friendId of friends) {
+            const friend = await getUserById(friendId);
+            if (friend) {
+                html += `
+                    <div class="user-card">
+                        <div>
+                            <div class="username">${friend.username}</div>
+                            <div class="email">${friend.email}</div>
+                        </div>
+                        <button class="chat-from-peps" data-userid="${friend.id}" data-username="${friend.username}">Chat</button>
+                    </div>
+                `;
+            }
+        }
+        contentBody.innerHTML = html;
+
+        document.querySelectorAll('.chat-from-peps').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const userId = btn.dataset.userid;
+                const username = btn.dataset.username;
+                openChat(userId, username);
+            });
+        });
+    }
+
+    // Load search
+    async function loadSearch() {
+        contentHeader.innerHTML = '<h2>🔍 Search Users</h2>';
+        contentBody.innerHTML = `
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by username (e.g., @alex)">
+                <button id="searchBtn">Search</button>
+            </div>
+            <div id="searchResults"></div>
+        `;
+
+        document.getElementById('searchBtn').addEventListener('click', async () => {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!searchTerm) {
+                resultsDiv.innerHTML = '<div class="empty-state">Enter a username to search</div>';
+                return;
+            }
+
+            const user = await getUserByUsername(searchTerm);
+            if (!user || user.id === currentUser.uid) {
+                resultsDiv.innerHTML = '<div class="empty-state">No user found</div>';
+                return;
+            }
+
+            const isFriend = currentUser.friends?.includes(user.id);
+            const isRequestSent = await checkRequestSent(user.id);
+            
+            resultsDiv.innerHTML = `
+                <div class="user-card">
+                    <div>
+                        <div class="username">${user.username}</div>
+                        <div class="email">${user.email}</div>
+                    </div>
+                    ${!isFriend && !isRequestSent ? 
+                        `<button id="addFriendBtn">Add Friend</button>` : 
+                        isRequestSent ? 
+                        '<span style="color:#22C55E;">Request sent</span>' : 
+                        '<span style="color:#22C55E;">Friend</span>'}
+                </div>
+            `;
+
+            if (!isFriend && !isRequestSent) {
+                document.getElementById('addFriendBtn')?.addEventListener('click', async () => {
+                    await sendFriendRequest(user.id);
+                    resultsDiv.innerHTML = '<div class="empty-state">Friend request sent!</div>';
+                });
+            }
+        });
+    }
+
+    async function checkRequestSent(toUserId) {
+        const requestDoc = await getDoc(doc(db, 'friendRequests', `${currentUser.uid}_${toUserId}`));
+        return requestDoc.exists();
+    }
+
+    // Load requests
+    async function loadRequests() {
+        contentHeader.innerHTML = '<h2>📬 Friend Requests</h2>';
+        contentBody.innerHTML = '<div class="empty-state">Loading...</div>';
+
+        const q = query(collection(db, 'friendRequests'), where('toUserId', '==', currentUser.uid), where('status', '==', 'pending'));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            contentBody.innerHTML = '<div class="empty-state">No pending requests</div>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const req = doc.data();
+            html += `
+                <div class="request-card" data-requestid="${doc.id}" data-fromuserid="${req.fromUserId}">
+                    <div>
+                        <div class="username">${req.fromUsername}</div>
+                    </div>
+                    <div class="request-buttons">
+                        <button class="accept-btn">Accept</button>
+                        <button class="reject-btn">Reject</button>
+                    </div>
+                </div>
+            `;
+        });
+        contentBody.innerHTML = html;
+
+        document.querySelectorAll('.accept-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const card = btn.closest('.request-card');
+                const requestId = card.dataset.requestid;
+                const fromUserId = card.dataset.fromuserid;
+                await acceptFriendRequest(requestId, fromUserId, currentUser.uid);
+                loadRequests();
+            });
+        });
+
+        document.querySelectorAll('.reject-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const card = btn.closest('.request-card');
+                const requestId = card.dataset.requestid;
+                await rejectFriendRequest(requestId);
+                loadRequests();
+            });
+        });
+    }
+
+    // Load settings
+    function loadSettings() {
+        contentHeader.innerHTML = '<h2>⚙️ Controls</h2>';
+        contentBody.innerHTML = `
+            <div class="setting-item">
+                <label>Username</label>
+                <input type="text" id="settingsUsername" value="${currentUser.username}">
+                <button id="updateUsernameBtn">Update Username</button>
+            </div>
+            <div class="setting-item">
+                <label>Email</label>
+                <input type="email" id="settingsEmail" value="${currentUser.email}" disabled>
+            </div>
+            <button id="deleteAccountBtn" class="delete-btn">Delete Account</button>
+        `;
+
+        document.getElementById('updateUsernameBtn')?.addEventListener('click', async () => {
+            const newUsername = document.getElementById('settingsUsername').value.trim();
+            if (newUsername && newUsername.startsWith('@')) {
+                await updateDoc(doc(db, 'users', currentUser.uid), { username: newUsername });
+                currentUser.username = newUsername;
+                navUsername.textContent = newUsername;
+                alert('Username updated!');
+            } else {
+                alert('Username must start with @');
+            }
+        });
+
+        document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
+            if (confirm('Are you sure? This will delete all your data.')) {
+                await deleteDoc(doc(db, 'users', currentUser.uid));
+                await auth.currentUser.delete();
+                signOut(auth);
+            }
+        });
+    }
+
+    // Tab navigation
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.addEventListener('click', async () => {
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabName = tab.dataset.tab;
+            
+            if (tabName === 'convos') await loadConvosList();
+            else if (tabName === 'peps') await loadPeps();
+            else if (tabName === 'search') await loadSearch();
+            else if (tabName === 'requests') await loadRequests();
+            else if (tabName === 'settings') loadSettings();
+        });
+    });
+
+    // Sign up
     signupBtn.addEventListener('click', async () => {
         const username = document.getElementById('signupUsername').value.trim();
         const email = document.getElementById('signupEmail').value.trim();
@@ -459,12 +940,8 @@
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await saveUsernameToFirestore(userCredential.user.uid, username);
-            authError.textContent = '';
-            authError.className = 'success';
-            authError.textContent = 'Account created! Logging in...';
+            await saveUserToFirestore(userCredential.user.uid, email, username);
         } catch (error) {
-            authError.className = 'error';
             authError.textContent = error.message;
         }
     });
@@ -473,34 +950,28 @@
     loginBtn.addEventListener('click', async () => {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
-
         if (!email || !password) {
             authError.textContent = 'Email and password required';
             return;
         }
-
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            authError.textContent = '';
         } catch (error) {
-            authError.className = 'error';
             authError.textContent = error.message;
         }
     });
 
-    // Google Login
+    // Google login
     googleBtn.addEventListener('click', async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             const user = result.user;
-            const existingUsername = await getUsernameFromFirestore(user.uid);
-            
-            if (!existingUsername) {
-                const suggestedUsername = '@' + user.email.split('@')[0];
-                await saveUsernameToFirestore(user.uid, suggestedUsername);
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (!userDoc.exists()) {
+                const username = '@' + user.email.split('@')[0];
+                await saveUserToFirestore(user.uid, user.email, username);
             }
         } catch (error) {
-            authError.className = 'error';
             authError.textContent = error.message;
         }
     });
@@ -508,133 +979,25 @@
     // Logout
     logoutBtn.addEventListener('click', async () => {
         await signOut(auth);
-    });
-
-    // Send Message
-    sendBtn.addEventListener('click', async () => {
-        if (!messageInput.value.trim()) return;
-        
-        try {
-            await addDoc(collection(db, 'messages'), {
-                text: messageInput.value.trim(),
-                senderId: currentUserData.uid,
-                senderName: currentUserData.username,
-                timestamp: serverTimestamp()
-            });
-            messageInput.value = '';
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    });
-
-    // Enter key to send
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendBtn.click();
-    });
-
-    // Load messages in real-time
-    function loadMessages() {
         if (unsubscribeMessages) unsubscribeMessages();
-        
-        const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'));
-        
-        unsubscribeMessages = onSnapshot(q, (snapshot) => {
-            messagesArea.innerHTML = '';
-            
-            if (snapshot.empty) {
-                messagesArea.innerHTML = '<div class="welcome">✨ No messages yet. Say something!</div>';
-                return;
-            }
-            
-            snapshot.forEach((doc) => {
-                const msg = doc.data();
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${msg.senderId === currentUserData?.uid ? 'sent' : 'received'}`;
-                
-                const senderSpan = document.createElement('div');
-                senderSpan.className = 'sender';
-                senderSpan.textContent = msg.senderName || 'Anonymous';
-                
-                const textSpan = document.createElement('div');
-                textSpan.className = 'text';
-                textSpan.textContent = msg.text;
-                
-                const timeSpan = document.createElement('div');
-                timeSpan.className = 'time';
-                if (msg.timestamp) {
-                    const date = msg.timestamp.toDate();
-                    timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-                
-                messageDiv.appendChild(senderSpan);
-                messageDiv.appendChild(textSpan);
-                messageDiv.appendChild(timeSpan);
-                messagesArea.appendChild(messageDiv);
-            });
-            
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        });
-    }
+    });
 
-    // Update online status count
-    function setupOnlineStatus() {
-        // Simple online count - counts users with messages in last 5 min
-        // For simplicity, we'll just show static count
-        onlineStatus.textContent = '● Live Chat';
-    }
-
-    // Auth State Listener
+    // Auth state
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Get username from Firestore
-            let username = await getUsernameFromFirestore(user.uid);
-            
-            if (!username) {
-                // If no username exists (old account), create one
-                username = '@' + user.email.split('@')[0];
-                await saveUsernameToFirestore(user.uid, username);
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                currentUser = { id: user.uid, ...userDoc.data() };
+                navUsername.textContent = currentUser.username;
+                authSection.style.display = 'none';
+                appContainer.style.display = 'flex';
+                document.querySelector('.sidebar-tab[data-tab="convos"]').click();
             }
-            
-            currentUserData = {
-                uid: user.uid,
-                email: user.email,
-                username: username
-            };
-            
-            currentUserSpan.textContent = username;
-            
-            // Show chat, hide auth
-            authSection.style.display = 'none';
-            chatSection.style.display = 'flex';
-            
-            // Load messages
-            loadMessages();
-            setupOnlineStatus();
         } else {
-            // Hide chat, show auth
             authSection.style.display = 'flex';
-            chatSection.style.display = 'none';
-            
-            // Clear messages listener
-            if (unsubscribeMessages) {
-                unsubscribeMessages();
-                unsubscribeMessages = null;
-            }
-            
-            currentUserData = null;
-            
-            // Reset forms
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('signupUsername').value = '';
-            document.getElementById('signupEmail').value = '';
-            document.getElementById('signupPassword').value = '';
-            authError.textContent = '';
-            authError.className = 'error';
-            
-            // Show login form by default
-            loginForm.classList.remove('hidden');
-            signupForm.classList.add('hidden');
+            appContainer.style.display = 'none';
+            currentUser = null;
+            if (unsubscribeMessages) unsubscribeMessages();
         }
     });
 </script>
