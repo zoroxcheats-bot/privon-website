@@ -61,12 +61,7 @@ input:disabled{opacity:.4;cursor:not-allowed}
 .auth-sw a{color:var(--accent);cursor:pointer;font-weight:600}
 .err{color:var(--red);font-size:13px;text-align:center;margin-top:10px;min-height:18px}
 .hidden{display:none!important}
-/* VERIFY */
-.otp-info{background:rgba(59,126,246,.1);border:1px solid rgba(59,126,246,.2);border-radius:10px;
-  padding:12px 14px;font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6}
-.otp-info strong{color:var(--text)}
-.otp-resend{text-align:center;font-size:12px;color:var(--text3);margin-top:10px}
-.otp-resend a{color:var(--accent);cursor:pointer}
+
 /* APP */
 .app-wrap{display:none;height:100dvh;flex-direction:column;overflow:hidden}
 .topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);
@@ -313,12 +308,6 @@ input:disabled{opacity:.4;cursor:not-allowed}
       <button class="btn" id="signupBtn">Create Account →</button>
       <div class="auth-sw">Already have an account? <a id="showLogin">Sign in</a></div>
     </div>
-    <div id="verifyForm" class="hidden">
-      <div class="otp-info">📧 Verification link sent to <strong id="verifyEmailLabel"></strong>.<br>Click the link in your email then press below.</div>
-      <button class="btn" id="checkVerifyBtn">✓ I've Verified My Email</button>
-      <div class="otp-resend">Didn't get it? <a id="resendBtn">Resend email</a></div>
-      <div class="auth-sw" style="margin-top:11px"><a id="backToLoginBtn">← Back to login</a></div>
-    </div>
     <div class="div-or">or</div>
     <button class="btn btn-ghost" id="googleBtn">
       <svg width="15" height="15" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:8px">
@@ -421,8 +410,8 @@ input:disabled{opacity:.4;cursor:not-allowed}
 <script type="module">
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged,
-  sendEmailVerification, reload } from "firebase/auth";
+    signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged,
+} from "firebase/auth";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where,
   addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp,
   arrayUnion, Timestamp } from "firebase/firestore";
@@ -445,7 +434,6 @@ const gProvider = new GoogleAuthProvider();
 
 let cu = null;
 let unsubMsgs = null, unsubReqs = null;
-let pendingUser = null;
 let mvTimer = null, mvMoments = [], mvIdx = 0;
 let mcType = 'text', mcBg = 'linear-gradient(135deg,#667eea,#764ba2)', mcPriv = 'all', mcNotif = 'yes';
 let notifTimer = null;
@@ -453,7 +441,7 @@ let activeChat = null;
 
 // DOM refs
 const authWrap=document.getElementById('authWrap'), appWrap=document.getElementById('appWrap');
-const loginForm=document.getElementById('loginForm'), signupForm=document.getElementById('signupForm'), verifyForm=document.getElementById('verifyForm');
+const loginForm=document.getElementById('loginForm'), signupForm=document.getElementById('signupForm');
 const authErr=document.getElementById('authErr');
 const topAv=document.getElementById('topAv'), topName=document.getElementById('topName');
 const cHead=document.getElementById('cHead'), cBody=document.getElementById('cBody');
@@ -492,7 +480,7 @@ function pushNotif(title, body, icon){
 // Auth toggles
 document.getElementById('showSignup').onclick=()=>{ loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); authErr.textContent='' };
 document.getElementById('showLogin').onclick=()=>{ signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); authErr.textContent='' };
-document.getElementById('backToLoginBtn').onclick=()=>{ verifyForm.classList.add('hidden'); loginForm.classList.remove('hidden'); authErr.textContent=''; pendingUser=null };
+
 
 // Menu
 document.getElementById('menuBtn').onclick=e=>{ e.stopPropagation(); dropdown.classList.toggle('show') };
@@ -1081,11 +1069,6 @@ document.getElementById('signupBtn').onclick=async()=>{
   try{
     const cred=await createUserWithEmailAndPassword(auth,e,p);
     await saveUser(cred.user.uid,e,u);
-    await sendEmailVerification(cred.user);
-    pendingUser=cred.user;
-    document.getElementById('verifyEmailLabel').textContent=e;
-    signupForm.classList.add('hidden'); verifyForm.classList.remove('hidden');
-    await signOut(auth); // sign out until verified
   } catch(err){ authErr.textContent=err.message }
   btn.disabled=false; btn.textContent='Create Account →';
 };
@@ -1098,47 +1081,9 @@ document.getElementById('loginBtn').onclick=async()=>{
   const btn=document.getElementById('loginBtn'); btn.disabled=true; btn.textContent='Signing in…';
   try{
     const cred=await signInWithEmailAndPassword(auth,e,p);
-    if(!cred.user.emailVerified){
-      pendingUser=cred.user;
-      document.getElementById('verifyEmailLabel').textContent=e;
-      loginForm.classList.add('hidden'); verifyForm.classList.remove('hidden');
-      await signOut(auth);
-      authErr.textContent='Please verify your email first.';
-    }
     // if verified, onAuthStateChanged handles the rest
   } catch(err){ authErr.textContent=err.message }
   btn.disabled=false; btn.textContent='Sign In →';
-};
-
-document.getElementById('checkVerifyBtn').onclick=async()=>{
-  const btn=document.getElementById('checkVerifyBtn'); btn.disabled=true; btn.textContent='Checking…';
-  authErr.textContent='';
-  try{
-    const email=document.getElementById('verifyEmailLabel').textContent;
-    // Try to sign in fresh and check
-    if(pendingUser){
-      await reload(pendingUser);
-      if(pendingUser.emailVerified){
-        verifyForm.classList.add('hidden');
-        // Re-trigger login so user gets into app
-        loginForm.classList.remove('hidden');
-        authErr.style.color='var(--green)';
-        authErr.textContent='✓ Verified! Please sign in.';
-        pendingUser=null;
-      } else {
-        authErr.textContent='Not verified yet. Check your inbox and spam.';
-      }
-    } else {
-      loginForm.classList.remove('hidden'); verifyForm.classList.add('hidden');
-    }
-  } catch(err){ authErr.textContent='Error: '+err.message }
-  btn.disabled=false; btn.textContent='✓ I\'ve Verified My Email';
-};
-
-document.getElementById('resendBtn').onclick=async()=>{
-  if(!pendingUser){ authErr.textContent='Please sign up again.'; return }
-  try{ await sendEmailVerification(pendingUser); toast$('📧 Verification email resent!') }
-  catch(e){ authErr.textContent=e.message }
 };
 
 document.getElementById('googleBtn').onclick=async()=>{
@@ -1154,7 +1099,7 @@ document.getElementById('googleBtn').onclick=async()=>{
 
 // Auth state
 onAuthStateChanged(auth,async user=>{
-  if(user&&user.emailVerified){
+  if(user){
     const snap=await getDoc(doc(db,'users',user.uid));
     if(snap.exists()){
       cu={uid:user.uid,...snap.data()};
