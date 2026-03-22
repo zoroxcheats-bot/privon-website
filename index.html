@@ -22,8 +22,6 @@
             color: #FFFFFF;
             min-height: 100vh;
         }
-
-        /* Auth Section */
         .auth-container {
             display: flex;
             justify-content: center;
@@ -54,7 +52,7 @@
             font-size: 14px;
             margin-bottom: 32px;
         }
-        input, textarea {
+        input {
             width: 100%;
             padding: 14px 16px;
             background: #0F172A;
@@ -65,7 +63,7 @@
             margin-bottom: 16px;
             outline: none;
         }
-        input:focus, textarea:focus { border-color: #3B82F6; }
+        input:focus { border-color: #3B82F6; }
         button {
             width: 100%;
             padding: 14px;
@@ -85,8 +83,6 @@
         .error { color: #EF4444; font-size: 14px; text-align: center; margin-top: 12px; }
         .success { color: #22C55E; }
         .hidden { display: none; }
-
-        /* Main App */
         .app-container { display: none; height: 100vh; flex-direction: column; }
         .top-bar {
             background: #1E293B;
@@ -124,7 +120,7 @@
             background: #1E293B;
             border-radius: 12px;
             border: 1px solid #334155;
-            width: 180px;
+            width: 160px;
             z-index: 100;
             display: none;
         }
@@ -137,7 +133,6 @@
             cursor: pointer;
         }
         .dropdown-menu a:hover { background: #334155; }
-        
         .main-layout { display: flex; flex: 1; overflow: hidden; }
         .sidebar {
             width: 280px;
@@ -153,7 +148,6 @@
         }
         .sidebar-tab:hover { background: #1E293B; }
         .sidebar-tab.active { background: #1E293B; border-left: 3px solid #3B82F6; }
-        
         .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header {
             padding: 16px 20px;
@@ -165,11 +159,9 @@
         }
         .content-header h2 { flex: 1; }
         .content-body { flex: 1; overflow-y: auto; padding: 20px; }
-        
         .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
         .search-box input { margin-bottom: 0; flex: 1; }
         .search-box button { width: auto; padding: 14px 20px; margin: 0; }
-        
         .user-card {
             background: #1E293B;
             border-radius: 12px;
@@ -182,7 +174,6 @@
         .user-card .username { font-weight: bold; }
         .user-card .email { font-size: 12px; color: #94A3B8; }
         .user-card button { width: auto; padding: 8px 16px; margin: 0; font-size: 12px; }
-        
         .request-card {
             background: #1E293B;
             border-radius: 12px;
@@ -196,7 +187,6 @@
         .request-card button { width: auto; padding: 6px 12px; margin: 0; font-size: 12px; }
         .accept-btn { background: #22C55E; }
         .reject-btn { background: #EF4444; }
-        
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
         .message {
             max-width: 70%;
@@ -209,7 +199,6 @@
         .message .time { font-size: 10px; color: #94A3B8; margin-top: 4px; }
         .message-img { max-width: 200px; max-height: 200px; border-radius: 12px; cursor: pointer; }
         .message-video { max-width: 250px; max-height: 250px; border-radius: 12px; }
-        
         .chat-input-area {
             background: #1E293B;
             padding: 16px;
@@ -226,7 +215,6 @@
             cursor: pointer;
         }
         .empty-state { text-align: center; color: #94A3B8; padding: 40px; }
-        
         .setting-item {
             background: #1E293B;
             border-radius: 12px;
@@ -236,7 +224,6 @@
         .setting-item label { display: block; margin-bottom: 8px; font-weight: bold; }
         .delete-btn { background: #EF4444; margin-top: 20px; }
         .delete-btn:hover { background: #DC2626; }
-        
         .privacy-item {
             background: #1E293B;
             border-radius: 12px;
@@ -281,7 +268,6 @@
 </head>
 <body>
 
-<!-- AUTH SECTION -->
 <div id="authSection" class="auth-container">
     <div class="auth-card">
         <div class="logo">PRIVON</div>
@@ -305,7 +291,6 @@
     </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="appContainer" class="app-container">
     <div class="top-bar">
         <div class="logo-small">PRIVON</div>
@@ -335,7 +320,7 @@
 
 <script type="module">
     import { initializeApp } from "firebase/app";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, updateProfile } from "firebase/auth";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -358,7 +343,6 @@
     let currentChatUser = null;
     let unsubscribeMessages = null;
 
-    // DOM Elements
     const authSection = document.getElementById('authSection');
     const appContainer = document.getElementById('appContainer');
     const loginForm = document.getElementById('loginForm');
@@ -378,15 +362,11 @@
     const menuSettings = document.getElementById('menuSettings');
     const menuLogout = document.getElementById('menuLogout');
 
-    // Dropdown menu
     menuBtn.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     document.addEventListener('click', (e) => {
-        if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.remove('show');
-        }
+        if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) dropdownMenu.classList.remove('show');
     });
 
-    // Toggle forms
     showSignupLink.addEventListener('click', () => {
         loginForm.classList.add('hidden');
         signupForm.classList.remove('hidden');
@@ -405,22 +385,19 @@
             createdAt: serverTimestamp(),
             friends: [],
             privacy: { lastSeen: true, readReceipts: true }
-        }, { merge: true });
+        });
     }
 
     async function getUserByUsername(username) {
         const q = query(collection(db, 'users'), where('username', '==', username));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const doc = querySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() };
-        }
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
         return null;
     }
 
     async function getUserById(userId) {
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        if (userDoc.exists()) return { id: userDoc.id, ...userDoc.data() };
+        const docSnap = await getDoc(doc(db, 'users', userId));
+        if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
         return null;
     }
 
@@ -434,6 +411,7 @@
             status: 'pending',
             createdAt: serverTimestamp()
         });
+        console.log('Request sent to:', toUsername);
     }
 
     async function acceptFriendRequest(requestId, fromUserId, toUserId) {
@@ -616,6 +594,7 @@
                 const card = btn.closest('.request-card');
                 await acceptFriendRequest(card.dataset.requestid, card.dataset.fromuserid, currentUser.uid);
                 loadRequests();
+                loadConvosList();
             });
         });
         document.querySelectorAll('.reject-btn').forEach(btn => {
@@ -663,12 +642,10 @@
         });
     }
 
-    // Menu actions
     menuPrivacy.addEventListener('click', () => { loadPrivacy(); dropdownMenu.classList.remove('show'); });
     menuSettings.addEventListener('click', () => { loadSettings(); dropdownMenu.classList.remove('show'); });
     menuLogout.addEventListener('click', async () => { await signOut(auth); if(unsubscribeMessages) unsubscribeMessages(); });
 
-    // Tab navigation
     document.querySelectorAll('.sidebar-tab').forEach(tab => {
         tab.addEventListener('click', async () => {
             document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
@@ -681,7 +658,6 @@
         });
     });
 
-    // Signup
     signupBtn.addEventListener('click', async () => {
         const username = document.getElementById('signupUsername').value.trim();
         const email = document.getElementById('signupEmail').value.trim();
@@ -695,7 +671,6 @@
         } catch (error) { authError.textContent = error.message; }
     });
 
-    // Login
     loginBtn.addEventListener('click', async () => {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -704,7 +679,6 @@
         catch (error) { authError.textContent = error.message; }
     });
 
-    // Google login
     googleBtn.addEventListener('click', async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
@@ -716,7 +690,6 @@
         } catch (error) { authError.textContent = error.message; }
     });
 
-    // Auth state
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
