@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privon — Private Communication</title>
+    <title>Privon — Private Live Chat</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+            }
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -15,198 +24,619 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0F172A;
             color: #FFFFFF;
-            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
+        /* Auth Section */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 48px;
+        .auth-card {
+            background: #1E293B;
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         .logo {
-            font-size: 56px;
+            font-size: 36px;
             font-weight: bold;
-            background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%);
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 12px;
         }
 
         .tagline {
+            text-align: center;
             color: #94A3B8;
-            font-size: 18px;
-        }
-
-        /* Cards */
-        .card {
-            background: #1E293B;
-            border-radius: 20px;
-            padding: 32px;
-            margin-bottom: 24px;
-            border: 1px solid #334155;
-        }
-
-        .card h2 {
-            font-size: 24px;
-            margin-bottom: 16px;
-            color: #FFFFFF;
-        }
-
-        .card p {
-            color: #CBD5E1;
-            margin-bottom: 20px;
-        }
-
-        /* Features Grid */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            font-size: 14px;
             margin-bottom: 32px;
         }
 
-        .feature {
+        input {
+            width: 100%;
+            padding: 14px 16px;
             background: #0F172A;
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2563EB;
+        }
+
+        .google-btn {
+            background: #1E293B;
             border: 1px solid #334155;
         }
 
-        .feature-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
+        .google-btn:hover {
+            background: #334155;
         }
 
-        .feature h3 {
-            margin-bottom: 8px;
+        .divider {
+            text-align: center;
+            color: #64748B;
+            margin: 16px 0;
+            font-size: 14px;
+            position: relative;
         }
 
-        .feature p {
+        .divider::before,
+        .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #334155;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .error {
+            color: #EF4444;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .success {
+            color: #22C55E;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        /* Chat Section */
+        .chat-container {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #1E293B;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .chat-header h2 {
+            font-size: 20px;
+        }
+
+        .chat-header .username {
+            color: #3B82F6;
+        }
+
+        .logout-btn {
+            background: #EF4444;
+            width: auto;
+            padding: 8px 16px;
+            margin: 0;
+        }
+
+        .logout-btn:hover {
+            background: #DC2626;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            background: #3B82F6;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            background: #1E293B;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .sender {
+            font-size: 11px;
+            color: #94A3B8;
+            margin-bottom: 4px;
+        }
+
+        .message .text {
+            font-size: 14px;
+        }
+
+        .message .time {
+            font-size: 10px;
+            color: #94A3B8;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .input-area {
+            background: #1E293B;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            border-top: 1px solid #334155;
+        }
+
+        .input-area input {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .input-area button {
+            width: auto;
+            padding: 14px 24px;
+            margin: 0;
+        }
+
+        .online-count {
+            font-size: 12px;
+            color: #22C55E;
+            margin-top: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #94A3B8;
+            padding: 20px;
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 20px;
+            color: #94A3B8;
+        }
+
+        /* Switch between login/signup */
+        .switch-mode {
+            text-align: center;
+            margin-top: 16px;
             font-size: 14px;
             color: #94A3B8;
         }
 
-        /* Button */
-        .download-btn {
-            display: inline-block;
-            background: #3B82F6;
-            color: white;
-            padding: 14px 32px;
-            border-radius: 40px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 18px;
-            margin-top: 16px;
-            transition: background 0.3s;
-        }
-
-        .download-btn:hover {
-            background: #2563EB;
-        }
-
-        .coming-soon {
-            background: #334155;
-            cursor: not-allowed;
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding-top: 32px;
-            color: #64748B;
-            font-size: 14px;
-            border-top: 1px solid #1E293B;
-            margin-top: 32px;
-        }
-
-        .footer a {
+        .switch-mode a {
             color: #3B82F6;
             text-decoration: none;
+            cursor: pointer;
         }
 
-        .footer a:hover {
+        .switch-mode a:hover {
             text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">PRIVON</div>
-            <div class="tagline">Private Communication. No Phone Numbers.</div>
-        </div>
 
-        <!-- Main Card -->
-        <div class="card">
-            <h2>🔐 Your Privacy First</h2>
-            <p>Privon is a private messaging app built for people who value their privacy. No phone numbers. No contact syncing. Just you and the people you choose to connect with.</p>
-        </div>
+<!-- AUTH SECTION -->
+<div id="authSection" class="auth-container">
+    <div class="auth-card">
+        <div class="logo">PRIVON</div>
+        <div class="tagline">No phone number. Just privacy.</div>
 
-        <!-- Features -->
-        <h2 style="margin-bottom: 20px;">Features</h2>
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">💬</div>
-                <h3>Convos</h3>
-                <p>End-to-end encrypted messages</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">📞</div>
-                <h3>Sync</h3>
-                <p>Voice calls with privacy</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🎥</div>
-                <h3>Live Sync</h3>
-                <p>Secure video calls</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🌄</div>
-                <h3>Moments</h3>
-                <p>Share moments that disappear</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">👥</div>
-                <h3>Peps</h3>
-                <p>Your private connection list</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">⚙️</div>
-                <h3>Controls</h3>
-                <p>Full privacy settings</p>
+        <!-- Login Form -->
+        <div id="loginForm">
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button id="loginBtn">Login →</button>
+            <div class="switch-mode">
+                New user? <a id="showSignupLink">Create account</a>
             </div>
         </div>
 
-        <!-- Download Section -->
-        <div class="card" style="text-align: center;">
-            <h2>📱 Download Privon</h2>
-            <p>Get the app and start communicating privately.</p>
-            <a href="#" class="download-btn coming-soon">Coming Soon</a>
-            <p style="font-size: 12px; margin-top: 16px; color: #64748B;">APK available soon — stay tuned</p>
+        <!-- Signup Form (hidden by default) -->
+        <div id="signupForm" class="hidden">
+            <input type="text" id="signupUsername" placeholder="Username (e.g., @alex)">
+            <input type="email" id="signupEmail" placeholder="Email">
+            <input type="password" id="signupPassword" placeholder="Password (min 6 chars)">
+            <button id="signupBtn">Create Account →</button>
+            <div class="switch-mode">
+                Already have account? <a id="showLoginLink">Login</a>
+            </div>
         </div>
 
-        <!-- Privacy Policy Link -->
-        <div class="card">
-            <h2>📜 Privacy Policy</h2>
-            <p>We take your privacy seriously. No phone numbers. No contact uploads. Messages are end-to-end encrypted.</p>
-            <a href="privacy.html" style="color: #3B82F6;">Read full Privacy Policy →</a>
-        </div>
+        <div class="divider">or</div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p>© 2025 Privon. All rights reserved.</p>
-            <p>Built with 🔐 for privacy</p>
+        <button id="googleBtn" class="google-btn">Continue with Google</button>
+        <div id="authError" class="error"></div>
+    </div>
+</div>
+
+<!-- CHAT SECTION -->
+<div id="chatSection" class="chat-container">
+    <div class="chat-header">
+        <div>
+            <h2>💬 Convos</h2>
+            <div id="onlineStatus" class="online-count">● Connecting...</div>
+        </div>
+        <div>
+            <span id="currentUser" class="username"></span>
+            <button id="logoutBtn" class="logout-btn">Leave</button>
         </div>
     </div>
+    <div id="messagesArea" class="messages-area">
+        <div class="loading">Loading messages...</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "firebase/app";
+    import { 
+        getAuth, 
+        createUserWithEmailAndPassword, 
+        signInWithEmailAndPassword, 
+        signInWithPopup, 
+        GoogleAuthProvider, 
+        signOut, 
+        onAuthStateChanged 
+    } from "firebase/auth";
+    import { 
+        getFirestore, 
+        collection, 
+        addDoc, 
+        query, 
+        orderBy, 
+        onSnapshot, 
+        serverTimestamp,
+        doc,
+        setDoc,
+        getDoc
+    } from "firebase/firestore";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDdC1U5W38AtRzwyxc5JWdWLR67SR1rLx0",
+        authDomain: "privon-web-chat.firebaseapp.com",
+        projectId: "privon-web-chat",
+        storageBucket: "privon-web-chat.firebasestorage.app",
+        messagingSenderId: "487526066785",
+        appId: "1:487526066785:web:80ba45988afd4f3a7ad820"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    // DOM Elements
+    const authSection = document.getElementById('authSection');
+    const chatSection = document.getElementById('chatSection');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const showSignupLink = document.getElementById('showSignupLink');
+    const showLoginLink = document.getElementById('showLoginLink');
+    const loginBtn = document.getElementById('loginBtn');
+    const signupBtn = document.getElementById('signupBtn');
+    const googleBtn = document.getElementById('googleBtn');
+    const authError = document.getElementById('authError');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const messagesArea = document.getElementById('messagesArea');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const onlineStatus = document.getElementById('onlineStatus');
+    const currentUserSpan = document.getElementById('currentUser');
+
+    let currentUserData = null;
+    let unsubscribeMessages = null;
+
+    // Toggle between login and signup forms
+    showSignupLink.addEventListener('click', () => {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        authError.textContent = '';
+    });
+
+    showLoginLink.addEventListener('click', () => {
+        signupForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        authError.textContent = '';
+    });
+
+    // Save username to Firestore
+    async function saveUsernameToFirestore(userId, username) {
+        await setDoc(doc(db, 'users', userId), {
+            username: username,
+            email: auth.currentUser?.email,
+            createdAt: serverTimestamp()
+        }, { merge: true });
+    }
+
+    // Get username from Firestore
+    async function getUsernameFromFirestore(userId) {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+            return userDoc.data().username;
+        }
+        return null;
+    }
+
+    // Sign Up
+    signupBtn.addEventListener('click', async () => {
+        const username = document.getElementById('signupUsername').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
+        const password = document.getElementById('signupPassword').value;
+
+        if (!username || !email || !password) {
+            authError.textContent = 'All fields required';
+            return;
+        }
+        if (!username.startsWith('@')) {
+            authError.textContent = 'Username must start with @';
+            return;
+        }
+        if (password.length < 6) {
+            authError.textContent = 'Password must be at least 6 characters';
+            return;
+        }
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await saveUsernameToFirestore(userCredential.user.uid, username);
+            authError.textContent = '';
+            authError.className = 'success';
+            authError.textContent = 'Account created! Logging in...';
+        } catch (error) {
+            authError.className = 'error';
+            authError.textContent = error.message;
+        }
+    });
+
+    // Login
+    loginBtn.addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+            authError.textContent = 'Email and password required';
+            return;
+        }
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            authError.textContent = '';
+        } catch (error) {
+            authError.className = 'error';
+            authError.textContent = error.message;
+        }
+    });
+
+    // Google Login
+    googleBtn.addEventListener('click', async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+            const existingUsername = await getUsernameFromFirestore(user.uid);
+            
+            if (!existingUsername) {
+                const suggestedUsername = '@' + user.email.split('@')[0];
+                await saveUsernameToFirestore(user.uid, suggestedUsername);
+            }
+        } catch (error) {
+            authError.className = 'error';
+            authError.textContent = error.message;
+        }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+        await signOut(auth);
+    });
+
+    // Send Message
+    sendBtn.addEventListener('click', async () => {
+        if (!messageInput.value.trim()) return;
+        
+        try {
+            await addDoc(collection(db, 'messages'), {
+                text: messageInput.value.trim(),
+                senderId: currentUserData.uid,
+                senderName: currentUserData.username,
+                timestamp: serverTimestamp()
+            });
+            messageInput.value = '';
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    });
+
+    // Enter key to send
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendBtn.click();
+    });
+
+    // Load messages in real-time
+    function loadMessages() {
+        if (unsubscribeMessages) unsubscribeMessages();
+        
+        const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'));
+        
+        unsubscribeMessages = onSnapshot(q, (snapshot) => {
+            messagesArea.innerHTML = '';
+            
+            if (snapshot.empty) {
+                messagesArea.innerHTML = '<div class="welcome">✨ No messages yet. Say something!</div>';
+                return;
+            }
+            
+            snapshot.forEach((doc) => {
+                const msg = doc.data();
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.senderId === currentUserData?.uid ? 'sent' : 'received'}`;
+                
+                const senderSpan = document.createElement('div');
+                senderSpan.className = 'sender';
+                senderSpan.textContent = msg.senderName || 'Anonymous';
+                
+                const textSpan = document.createElement('div');
+                textSpan.className = 'text';
+                textSpan.textContent = msg.text;
+                
+                const timeSpan = document.createElement('div');
+                timeSpan.className = 'time';
+                if (msg.timestamp) {
+                    const date = msg.timestamp.toDate();
+                    timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                messageDiv.appendChild(senderSpan);
+                messageDiv.appendChild(textSpan);
+                messageDiv.appendChild(timeSpan);
+                messagesArea.appendChild(messageDiv);
+            });
+            
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        });
+    }
+
+    // Update online status count
+    function setupOnlineStatus() {
+        // Simple online count - counts users with messages in last 5 min
+        // For simplicity, we'll just show static count
+        onlineStatus.textContent = '● Live Chat';
+    }
+
+    // Auth State Listener
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // Get username from Firestore
+            let username = await getUsernameFromFirestore(user.uid);
+            
+            if (!username) {
+                // If no username exists (old account), create one
+                username = '@' + user.email.split('@')[0];
+                await saveUsernameToFirestore(user.uid, username);
+            }
+            
+            currentUserData = {
+                uid: user.uid,
+                email: user.email,
+                username: username
+            };
+            
+            currentUserSpan.textContent = username;
+            
+            // Show chat, hide auth
+            authSection.style.display = 'none';
+            chatSection.style.display = 'flex';
+            
+            // Load messages
+            loadMessages();
+            setupOnlineStatus();
+        } else {
+            // Hide chat, show auth
+            authSection.style.display = 'flex';
+            chatSection.style.display = 'none';
+            
+            // Clear messages listener
+            if (unsubscribeMessages) {
+                unsubscribeMessages();
+                unsubscribeMessages = null;
+            }
+            
+            currentUserData = null;
+            
+            // Reset forms
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('signupUsername').value = '';
+            document.getElementById('signupEmail').value = '';
+            document.getElementById('signupPassword').value = '';
+            authError.textContent = '';
+            authError.className = 'error';
+            
+            // Show login form by default
+            loginForm.classList.remove('hidden');
+            signupForm.classList.add('hidden');
+        }
+    });
+</script>
 </body>
 </html>
