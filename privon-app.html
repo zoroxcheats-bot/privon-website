@@ -463,8 +463,33 @@ function showNotifBanner(name, msg, photoURL, senderId){
   notifBanner.classList.add('show');
   clearTimeout(notifTimer);
   notifTimer=setTimeout(()=>notifBanner.classList.remove('show'),4000);
+  playNotifSound();
 }
 document.getElementById('notifClose').onclick=()=>notifBanner.classList.remove('show');
+
+// Notification sound using Web Audio API (no file needed)
+function playNotifSound(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    // Two-tone ping sound like WhatsApp/Telegram
+    const playTone = (freq, startTime, duration, vol=0.3) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(vol, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = ctx.currentTime;
+    playTone(880, now, 0.15, 0.25);       // first ping
+    playTone(1100, now + 0.12, 0.2, 0.2); // second ping (higher)
+  } catch(e){}
+}
 
 // Push notification (browser/PWA)
 async function askPushPermission(){
