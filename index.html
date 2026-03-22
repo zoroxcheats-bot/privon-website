@@ -1,712 +1,1170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privon — Private Messenger</title>
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-                "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
-                "firebase/storage": "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"
-            }
-        }
-    </script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0F172A;
-            color: #FFFFFF;
-            min-height: 100vh;
-        }
-        .auth-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .auth-card {
-            background: #1E293B;
-            border-radius: 24px;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid #334155;
-        }
-        .logo {
-            font-size: 36px;
-            font-weight: bold;
-            text-align: center;
-            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-        }
-        .tagline {
-            text-align: center;
-            color: #94A3B8;
-            font-size: 14px;
-            margin-bottom: 32px;
-        }
-        input {
-            width: 100%;
-            padding: 14px 16px;
-            background: #0F172A;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            color: #FFFFFF;
-            font-size: 16px;
-            margin-bottom: 16px;
-            outline: none;
-        }
-        input:focus { border-color: #3B82F6; }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #3B82F6;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 12px;
-        }
-        button:hover { background: #2563EB; }
-        .google-btn { background: #1E293B; border: 1px solid #334155; }
-        .google-btn:hover { background: #334155; }
-        .divider { text-align: center; color: #64748B; margin: 16px 0; }
-        .error { color: #EF4444; font-size: 14px; text-align: center; margin-top: 12px; }
-        .success { color: #22C55E; }
-        .hidden { display: none; }
-        .app-container { display: none; height: 100vh; flex-direction: column; }
-        .top-bar {
-            background: #1E293B;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #334155;
-        }
-        .top-bar .logo-small {
-            font-size: 20px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .top-bar-right { display: flex; gap: 12px; align-items: center; position: relative; }
-        .username-badge {
-            background: #0F172A;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-        .menu-btn {
-            background: transparent;
-            width: auto;
-            padding: 8px 12px;
-            margin: 0;
-            font-size: 20px;
-        }
-        .dropdown-menu {
-            position: absolute;
-            top: 45px;
-            right: 0;
-            background: #1E293B;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            width: 160px;
-            z-index: 100;
-            display: none;
-        }
-        .dropdown-menu.show { display: block; }
-        .dropdown-menu a {
-            display: block;
-            padding: 12px 16px;
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .dropdown-menu a:hover { background: #334155; }
-        .main-layout { display: flex; flex: 1; overflow: hidden; }
-        .sidebar {
-            width: 280px;
-            background: #0F172A;
-            border-right: 1px solid #334155;
-            overflow-y: auto;
-        }
-        .sidebar-tab {
-            padding: 14px 20px;
-            cursor: pointer;
-            border-bottom: 1px solid #1E293B;
-            transition: background 0.2s;
-        }
-        .sidebar-tab:hover { background: #1E293B; }
-        .sidebar-tab.active { background: #1E293B; border-left: 3px solid #3B82F6; }
-        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .content-header {
-            padding: 16px 20px;
-            background: #1E293B;
-            border-bottom: 1px solid #334155;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .content-header h2 { flex: 1; }
-        .content-body { flex: 1; overflow-y: auto; padding: 20px; }
-        .search-box { display: flex; gap: 8px; margin-bottom: 20px; }
-        .search-box input { margin-bottom: 0; flex: 1; }
-        .search-box button { width: auto; padding: 14px 20px; margin: 0; }
-        .user-card {
-            background: #1E293B;
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .user-card .username { font-weight: bold; }
-        .user-card .email { font-size: 12px; color: #94A3B8; }
-        .user-card button { width: auto; padding: 8px 16px; margin: 0; font-size: 12px; }
-        .request-card {
-            background: #1E293B;
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .request-card .request-buttons { display: flex; gap: 8px; }
-        .request-card button { width: auto; padding: 6px 12px; margin: 0; font-size: 12px; }
-        .accept-btn { background: #22C55E; }
-        .reject-btn { background: #EF4444; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .message {
-            max-width: 70%;
-            padding: 10px 14px;
-            border-radius: 18px;
-        }
-        .message.sent { background: #3B82F6; align-self: flex-end; }
-        .message.received { background: #1E293B; align-self: flex-start; }
-        .message .text { font-size: 14px; }
-        .message .time { font-size: 10px; color: #94A3B8; margin-top: 4px; }
-        .message-img { max-width: 200px; max-height: 200px; border-radius: 12px; cursor: pointer; }
-        .message-video { max-width: 250px; max-height: 250px; border-radius: 12px; }
-        .chat-input-area {
-            background: #1E293B;
-            padding: 16px;
-            display: flex;
-            gap: 12px;
-            border-top: 1px solid #334155;
-        }
-        .chat-input-area input { margin-bottom: 0; flex: 1; }
-        .chat-input-area button { width: auto; padding: 14px 24px; margin: 0; }
-        .file-label {
-            background: #3B82F6;
-            padding: 14px 20px;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        .empty-state { text-align: center; color: #94A3B8; padding: 40px; }
-        .setting-item {
-            background: #1E293B;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-        .setting-item label { display: block; margin-bottom: 8px; font-weight: bold; }
-        .delete-btn { background: #EF4444; margin-top: 20px; }
-        .delete-btn:hover { background: #DC2626; }
-        .privacy-item {
-            background: #1E293B;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #334155;
-            transition: 0.3s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: 0.3s;
-            border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #3B82F6; }
-        input:checked + .slider:before { transform: translateX(26px); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privon — Private Messenger</title>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/storage": "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080C14;
+  --surface: #0D1520;
+  --surface2: #111B2B;
+  --surface3: #162030;
+  --border: #1E2D42;
+  --border2: #243548;
+  --accent: #4F8EF7;
+  --accent2: #2D6FE0;
+  --accent-glow: rgba(79,142,247,0.18);
+  --accent-glow2: rgba(79,142,247,0.08);
+  --text: #E8EEF8;
+  --text2: #8FA3BF;
+  --text3: #4D6480;
+  --green: #34D399;
+  --red: #F87171;
+  --green-bg: rgba(52,211,153,0.1);
+  --red-bg: rgba(248,113,113,0.1);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── AUTH ── */
+.auth-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79,142,247,0.08) 0%, transparent 70%);
+  position: relative;
+}
+.auth-wrap::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234F8EF7' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 44px 40px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow: 0 0 60px rgba(79,142,247,0.06), 0 24px 48px rgba(0,0,0,0.5);
+}
+.auth-logo {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  text-align: center;
+  background: linear-gradient(135deg, #fff 30%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+.auth-tagline {
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  margin-bottom: 36px;
+}
+.auth-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.auth-input-group { margin-bottom: 18px; }
+input[type="text"], input[type="email"], input[type="password"] {
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+input:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn {
+  display: block;
+  width: 100%;
+  padding: 13px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  letter-spacing: 0.2px;
+}
+.btn:hover { background: var(--accent2); box-shadow: 0 4px 16px rgba(79,142,247,0.3); }
+.btn:active { transform: scale(0.98); }
+.btn-ghost {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  margin-top: 10px;
+}
+.btn-ghost:hover { background: var(--surface3); box-shadow: none; }
+.btn-sm {
+  display: inline-block;
+  width: auto;
+  padding: 7px 16px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.btn-green { background: var(--green); }
+.btn-green:hover { background: #10b981; }
+.btn-red { background: var(--red); }
+.btn-red:hover { background: #ef4444; }
+.btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.btn-danger:hover { background: rgba(248,113,113,0.18); }
+.divider-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text3);
+  font-size: 12px;
+  margin: 20px 0;
+}
+.divider-text::before, .divider-text::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 18px;
+}
+.auth-switch a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 600; }
+.auth-switch a:hover { text-decoration: underline; }
+.error-msg { color: var(--red); font-size: 13px; text-align: center; margin-top: 14px; min-height: 20px; }
+.hidden { display: none !important; }
+
+/* ── APP SHELL ── */
+.app-wrap { display: none; height: 100vh; flex-direction: column; }
+.topbar {
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.topbar-logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 30%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  flex: 1;
+}
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 14px 6px 10px;
+  border-radius: 40px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: default;
+}
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+.menu-wrap { position: relative; }
+.icon-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 18px;
+  transition: background 0.2s;
+}
+.icon-btn:hover { background: var(--surface3); }
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  width: 180px;
+  z-index: 200;
+  display: none;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+.dropdown.show { display: block; }
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dropdown-item:hover { background: var(--surface3); color: var(--text); }
+.dropdown-item.danger { color: var(--red); }
+.dropdown-item.danger:hover { background: var(--red-bg); }
+
+/* ── LAYOUT ── */
+.layout { display: flex; flex: 1; overflow: hidden; }
+.sidebar {
+  width: 68px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.nav-item {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 20px;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text2); }
+.nav-item.active { background: var(--accent-glow); color: var(--accent); }
+.nav-item .nav-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  background: var(--red);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  display: none;
+}
+.nav-item .nav-badge.show { display: flex; }
+.nav-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+.nav-item:hover .nav-tooltip { opacity: 1; }
+
+/* ── CONTENT ── */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.content-head {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.content-head h2 { font-size: 16px; font-weight: 600; flex: 1; }
+.content-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.content-body::-webkit-scrollbar { width: 4px; }
+.content-body::-webkit-scrollbar-track { background: transparent; }
+.content-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  min-height: 200px;
+  color: var(--text3);
+  font-size: 14px;
+}
+.empty-icon { font-size: 36px; opacity: 0.5; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.card:hover { border-color: var(--border2); background: var(--surface3); }
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.card-sub { font-size: 12px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+/* ── SEARCH ── */
+.search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.search-row input { flex: 1; margin: 0; }
+.search-row .btn { width: auto; padding: 13px 20px; }
+
+/* ── CHAT ── */
+.chat-wrap { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.msg {
+  max-width: 68%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.msg.sent { align-self: flex-end; align-items: flex-end; }
+.msg.recv { align-self: flex-start; align-items: flex-start; }
+.msg-bubble {
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.msg.sent .msg-bubble { background: var(--accent); border-bottom-right-radius: 4px; }
+.msg.recv .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg-time { font-size: 10px; color: var(--text3); padding: 0 4px; font-family: 'JetBrains Mono', monospace; }
+.msg-media { max-width: 220px; max-height: 220px; border-radius: 12px; cursor: pointer; display: block; }
+.msg-video { max-width: 260px; border-radius: 12px; display: block; }
+.chat-input-bar {
+  padding: 14px 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.chat-input-bar input { flex: 1; margin: 0; }
+.attach-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.attach-btn:hover { background: var(--surface3); }
+.send-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.send-btn:hover { background: var(--accent2); }
+
+/* ── SETTINGS / PRIVACY ── */
+.settings-section { margin-bottom: 28px; }
+.settings-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+.settings-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.privacy-row {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.privacy-info .privacy-name { font-size: 14px; font-weight: 500; }
+.privacy-info .privacy-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.toggle { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border2);
+  border-radius: 26px;
+  cursor: pointer;
+  transition: background 0.25s;
+}
+.toggle-thumb {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s;
+  cursor: pointer;
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-track { background: var(--accent); }
+.toggle input:checked ~ .toggle-thumb { transform: translateX(22px); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: 40px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── LOADER ── */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── STATUS DOT ── */
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+</style>
 </head>
 <body>
 
-<div id="authSection" class="auth-container">
-    <div class="auth-card">
-        <div class="logo">PRIVON</div>
-        <div class="tagline">No phone number. Just privacy.</div>
-        <div id="loginForm">
-            <input type="email" id="loginEmail" placeholder="Email">
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button id="loginBtn">Login →</button>
-            <div class="divider">New user? <a id="showSignupLink" style="color:#3B82F6; cursor:pointer;">Create account</a></div>
-        </div>
-        <div id="signupForm" class="hidden">
-            <input type="text" id="signupUsername" placeholder="Username (e.g., @alex)">
-            <input type="email" id="signupEmail" placeholder="Email">
-            <input type="password" id="signupPassword" placeholder="Password (min 6 chars)">
-            <button id="signupBtn">Create Account →</button>
-            <div class="divider">Already have account? <a id="showLoginLink" style="color:#3B82F6; cursor:pointer;">Login</a></div>
-        </div>
-        <div class="divider">or</div>
-        <button id="googleBtn" class="google-btn">Continue with Google</button>
-        <div id="authError" class="error"></div>
+<!-- AUTH -->
+<div id="authWrap" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">PRIVON</div>
+    <div class="auth-tagline">No phone number. Just privacy.</div>
+
+    <div id="loginForm">
+      <div class="auth-input-group"><label class="auth-label">Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="auth-input-group"><label class="auth-label">Password</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="btn" id="loginBtn">Sign In →</button>
+      <div class="auth-switch">New here? <a id="showSignup">Create account</a></div>
     </div>
+
+    <div id="signupForm" class="hidden">
+      <div class="auth-input-group"><label class="auth-label">Username</label><input type="text" id="signupUsername" placeholder="@yourname"></div>
+      <div class="auth-input-group"><label class="auth-label">Email</label><input type="email" id="signupEmail" placeholder="you@example.com"></div>
+      <div class="auth-input-group"><label class="auth-label">Password</label><input type="password" id="signupPassword" placeholder="Min 6 characters"></div>
+      <button class="btn" id="signupBtn">Create Account →</button>
+      <div class="auth-switch">Already have an account? <a id="showLogin">Sign in</a></div>
+    </div>
+
+    <div class="divider-text">or</div>
+    <button class="btn btn-ghost" id="googleBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:8px"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
+    <div id="authError" class="error-msg"></div>
+  </div>
 </div>
 
-<div id="appContainer" class="app-container">
-    <div class="top-bar">
-        <div class="logo-small">PRIVON</div>
-        <div class="top-bar-right">
-            <span id="navUsername" class="username-badge"></span>
-            <button id="menuBtn" class="menu-btn">⋮</button>
-            <div id="dropdownMenu" class="dropdown-menu">
-                <a id="menuPrivacy">🔐 Privacy</a>
-                <a id="menuSettings">⚙️ Settings</a>
-                <a id="menuLogout">🚪 Logout</a>
-            </div>
-        </div>
+<!-- APP -->
+<div id="appWrap" class="app-wrap">
+  <div class="topbar">
+    <div class="topbar-logo">PRIVON</div>
+    <div class="topbar-user">
+      <div class="avatar" id="topAvatar"></div>
+      <span id="topUsername"></span>
     </div>
-    <div class="main-layout">
-        <div class="sidebar">
-            <div class="sidebar-tab" data-tab="convos">💬 Convos</div>
-            <div class="sidebar-tab" data-tab="peps">👥 Peps</div>
-            <div class="sidebar-tab" data-tab="search">🔍 Search</div>
-            <div class="sidebar-tab" data-tab="requests">📬 Requests</div>
-        </div>
-        <div class="content-area">
-            <div id="contentHeader" class="content-header"><h2>Convos</h2></div>
-            <div id="contentBody" class="content-body"><div class="empty-state">Select a conversation</div></div>
-        </div>
+    <div class="menu-wrap">
+      <div class="icon-btn" id="menuBtn">⋮</div>
+      <div class="dropdown" id="dropdown">
+        <div class="dropdown-item" id="menuPrivacy">🔐 &nbsp;Privacy</div>
+        <div class="dropdown-item" id="menuSettings">⚙️ &nbsp;Settings</div>
+        <div class="dropdown-item danger" id="menuLogout">🚪 &nbsp;Logout</div>
+      </div>
     </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-item active" data-tab="convos">💬<span class="nav-tooltip">Convos</span></div>
+      <div class="nav-item" data-tab="peps">👥<span class="nav-tooltip">Friends</span></div>
+      <div class="nav-item" data-tab="search">🔍<span class="nav-tooltip">Search</span></div>
+      <div class="nav-item" data-tab="requests">📬<span class="nav-badge" id="requestBadge">0</span><span class="nav-tooltip">Requests</span></div>
+    </div>
+    <div class="content">
+      <div class="content-head" id="contentHead"><h2>Convos</h2></div>
+      <div class="content-body" id="contentBody"><div class="empty-state"><div class="empty-icon">💬</div>Select a conversation</div></div>
+    </div>
+  </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script type="module">
-    import { initializeApp } from "firebase/app";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, serverTimestamp, arrayUnion } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDdC1U5W38AtRzwyxc5JWdWLR67SR1rLx0",
-        authDomain: "privon-web-chat.firebaseapp.com",
-        projectId: "privon-web-chat",
-        storageBucket: "privon-web-chat.firebasestorage.app",
-        messagingSenderId: "487526066785",
-        appId: "1:487526066785:web:80ba45988afd4f3a7ad820"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyDdC1U5W38AtRzwyxc5JWdWLR67SR1rLx0",
+  authDomain: "privon-web-chat.firebaseapp.com",
+  projectId: "privon-web-chat",
+  storageBucket: "privon-web-chat.firebasestorage.app",
+  messagingSenderId: "487526066785",
+  appId: "1:487526066785:web:80ba45988afd4f3a7ad820"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-    const googleProvider = new GoogleAuthProvider();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+const googleProvider = new GoogleAuthProvider();
 
-    let currentUser = null;
-    let currentChatUser = null;
-    let unsubscribeMessages = null;
+let currentUser = null; // always the freshest copy
+let unsubMessages = null;
+let unsubRequests = null;
 
-    const authSection = document.getElementById('authSection');
-    const appContainer = document.getElementById('appContainer');
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-    const loginBtn = document.getElementById('loginBtn');
-    const signupBtn = document.getElementById('signupBtn');
-    const googleBtn = document.getElementById('googleBtn');
-    const authError = document.getElementById('authError');
-    const navUsername = document.getElementById('navUsername');
-    const contentHeader = document.getElementById('contentHeader');
-    const contentBody = document.getElementById('contentBody');
-    const showSignupLink = document.getElementById('showSignupLink');
-    const showLoginLink = document.getElementById('showLoginLink');
-    const menuBtn = document.getElementById('menuBtn');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    const menuPrivacy = document.getElementById('menuPrivacy');
-    const menuSettings = document.getElementById('menuSettings');
-    const menuLogout = document.getElementById('menuLogout');
+// ── DOM ──
+const authWrap = document.getElementById('authWrap');
+const appWrap = document.getElementById('appWrap');
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const authError = document.getElementById('authError');
+const topAvatar = document.getElementById('topAvatar');
+const topUsername = document.getElementById('topUsername');
+const contentHead = document.getElementById('contentHead');
+const contentBody = document.getElementById('contentBody');
+const dropdown = document.getElementById('dropdown');
+const requestBadge = document.getElementById('requestBadge');
+const toast = document.getElementById('toast');
 
-    menuBtn.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
-    document.addEventListener('click', (e) => {
-        if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) dropdownMenu.classList.remove('show');
+// ── TOAST ──
+function showToast(msg, dur = 2800) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), dur);
+}
+
+// ── AUTH TOGGLES ──
+document.getElementById('showSignup').addEventListener('click', () => { loginForm.classList.add('hidden'); signupForm.classList.remove('hidden'); authError.textContent = ''; });
+document.getElementById('showLogin').addEventListener('click', () => { signupForm.classList.add('hidden'); loginForm.classList.remove('hidden'); authError.textContent = ''; });
+
+// ── MENU ──
+document.getElementById('menuBtn').addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); });
+document.addEventListener('click', () => dropdown.classList.remove('show'));
+document.getElementById('menuPrivacy').addEventListener('click', () => { renderPrivacy(); dropdown.classList.remove('show'); });
+document.getElementById('menuSettings').addEventListener('click', () => { renderSettings(); dropdown.classList.remove('show'); });
+document.getElementById('menuLogout').addEventListener('click', async () => { cleanup(); await signOut(auth); });
+
+// ── FIRESTORE HELPERS ──
+async function refreshCurrentUser() {
+  const snap = await getDoc(doc(db, 'users', currentUser.uid));
+  if (snap.exists()) currentUser = { uid: currentUser.uid, ...snap.data() };
+}
+
+async function saveUser(uid, email, username) {
+  await setDoc(doc(db, 'users', uid), {
+    email, username,
+    createdAt: serverTimestamp(),
+    friends: [],
+    privacy: { lastSeen: true, readReceipts: true }
+  });
+}
+
+async function getUserByUsername(username) {
+  const q = query(collection(db, 'users'), where('username', '==', username));
+  const snap = await getDocs(q);
+  if (!snap.empty) return { uid: snap.docs[0].id, ...snap.docs[0].data() };
+  return null;
+}
+
+async function getUserById(id) {
+  const snap = await getDoc(doc(db, 'users', id));
+  if (snap.exists()) return { uid: snap.id, ...snap.data() };
+  return null;
+}
+
+// ── FRIEND REQUESTS ──
+async function sendFriendRequest(toUserId, toUsername) {
+  // Check if reverse request already exists
+  const reverseSnap = await getDoc(doc(db, 'friendRequests', `${toUserId}_${currentUser.uid}`));
+  if (reverseSnap.exists()) {
+    // Auto-accept if they already sent us one
+    await acceptFriendRequest(`${toUserId}_${currentUser.uid}`, toUserId, currentUser.uid);
+    showToast('✅ You are now friends!');
+    return;
+  }
+  const requestId = `${currentUser.uid}_${toUserId}`;
+  await setDoc(doc(db, 'friendRequests', requestId), {
+    fromUserId: currentUser.uid,
+    fromUsername: currentUser.username,
+    toUserId,
+    toUsername,
+    status: 'pending',
+    createdAt: serverTimestamp()
+  });
+  showToast('📨 Friend request sent!');
+}
+
+async function acceptFriendRequest(requestId, fromUserId, toUserId) {
+  await updateDoc(doc(db, 'users', fromUserId), { friends: arrayUnion(toUserId) });
+  await updateDoc(doc(db, 'users', toUserId), { friends: arrayUnion(fromUserId) });
+  await deleteDoc(doc(db, 'friendRequests', requestId));
+  await refreshCurrentUser(); // ← FIX: keep local state fresh
+  updateAvatar();
+}
+
+async function rejectFriendRequest(requestId) {
+  await deleteDoc(doc(db, 'friendRequests', requestId));
+}
+
+// ── MESSAGES ──
+async function sendMessage(toUserId, text, mediaUrl = null, mediaType = null) {
+  const chatId = [currentUser.uid, toUserId].sort().join('_');
+  await addDoc(collection(db, 'chats', chatId, 'messages'), {
+    text: text || '',
+    mediaUrl, mediaType,
+    senderId: currentUser.uid,
+    senderName: currentUser.username,
+    timestamp: serverTimestamp()
+  });
+}
+
+async function uploadMedia(file) {
+  const r = ref(storage, `media/${Date.now()}_${file.name}`);
+  await uploadBytes(r, file);
+  return await getDownloadURL(r);
+}
+
+// ── AVATAR ──
+function getInitials(username) {
+  return username ? username.replace('@','').slice(0,2).toUpperCase() : '??';
+}
+function updateAvatar() {
+  topAvatar.textContent = getInitials(currentUser.username);
+  topUsername.textContent = currentUser.username;
+}
+
+// ── REQUEST BADGE (realtime) ──
+function watchRequestBadge() {
+  if (unsubRequests) unsubRequests();
+  const q = query(collection(db, 'friendRequests'), where('toUserId', '==', currentUser.uid), where('status', '==', 'pending'));
+  unsubRequests = onSnapshot(q, snap => {
+    const n = snap.size;
+    requestBadge.textContent = n;
+    requestBadge.classList.toggle('show', n > 0);
+  });
+}
+
+// ── TABS ──
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    const tab = item.dataset.tab;
+    if (tab === 'convos') renderConvos();
+    else if (tab === 'peps') renderPeps();
+    else if (tab === 'search') renderSearch();
+    else if (tab === 'requests') renderRequests();
+  });
+});
+
+// ── CONVOS ──
+async function renderConvos() {
+  setHead('💬 Conversations');
+  contentBody.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  await refreshCurrentUser();
+  const friends = currentUser.friends || [];
+  if (!friends.length) {
+    contentBody.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div>No conversations yet.<br>Find friends to start chatting!</div>';
+    return;
+  }
+  let html = '';
+  for (const fid of friends) {
+    const f = await getUserById(fid);
+    if (f) html += buildConvoCard(f);
+  }
+  contentBody.innerHTML = html || '<div class="empty-state"><div class="empty-icon">💬</div>No conversations yet.</div>';
+  contentBody.querySelectorAll('[data-open-chat]').forEach(el => {
+    el.addEventListener('click', () => openChat(el.dataset.openChat, el.dataset.username));
+  });
+}
+
+function buildConvoCard(f) {
+  return `<div class="card" data-open-chat="${f.uid}" data-username="${f.username}" style="cursor:pointer">
+    <div class="avatar" style="width:40px;height:40px;font-size:14px;position:relative">${getInitials(f.username)}<span class="online-dot"></span></div>
+    <div class="card-info"><div class="card-name">${f.username}</div><div class="card-sub">Tap to open chat</div></div>
+    <div style="color:var(--text3);font-size:18px">›</div>
+  </div>`;
+}
+
+// ── PEPS (FRIENDS) ──
+async function renderPeps() {
+  setHead('👥 Friends');
+  contentBody.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  await refreshCurrentUser();
+  const friends = currentUser.friends || [];
+  if (!friends.length) {
+    contentBody.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div>No friends yet.<br>Use Search to add people!</div>';
+    return;
+  }
+  let html = '';
+  for (const fid of friends) {
+    const f = await getUserById(fid);
+    if (f) html += `<div class="card">
+      <div class="avatar" style="width:40px;height:40px;font-size:14px">${getInitials(f.username)}</div>
+      <div class="card-info"><div class="card-name">${f.username}</div><div class="card-sub">${f.email}</div></div>
+      <div class="card-actions">
+        <button class="btn btn-sm" data-chat-uid="${f.uid}" data-chat-name="${f.username}">Chat</button>
+      </div>
+    </div>`;
+  }
+  contentBody.innerHTML = html;
+  contentBody.querySelectorAll('[data-chat-uid]').forEach(btn => {
+    btn.addEventListener('click', () => openChat(btn.dataset.chatUid, btn.dataset.chatName));
+  });
+}
+
+// ── SEARCH ──
+function renderSearch() {
+  setHead('🔍 Search Users');
+  contentBody.innerHTML = `<div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search by @username">
+    <button class="btn" id="searchBtn">Search</button>
+  </div>
+  <div id="searchResults"></div>`;
+
+  const doSearch = async () => {
+    const val = document.getElementById('searchInput').value.trim();
+    const res = document.getElementById('searchResults');
+    if (!val) { res.innerHTML = '<div class="empty-state">Enter a username to search</div>'; return; }
+    res.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+    const target = val.startsWith('@') ? val : '@' + val;
+    const user = await getUserByUsername(target);
+    if (!user || user.uid === currentUser.uid) {
+      res.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div>No user found</div>';
+      return;
+    }
+    await refreshCurrentUser();
+    const isFriend = (currentUser.friends || []).includes(user.uid);
+    const reqSnap = await getDoc(doc(db, 'friendRequests', `${currentUser.uid}_${user.uid}`));
+    const isRequestSent = reqSnap.exists();
+    let actionHtml = '';
+    if (isFriend) actionHtml = '<span style="color:var(--green);font-size:13px;font-weight:600">✓ Friends</span>';
+    else if (isRequestSent) actionHtml = '<span style="color:var(--text3);font-size:13px">Request sent</span>';
+    else actionHtml = `<button class="btn btn-sm" id="addFriendBtn">Add Friend</button>`;
+    res.innerHTML = `<div class="card">
+      <div class="avatar" style="width:42px;height:42px;font-size:15px">${getInitials(user.username)}</div>
+      <div class="card-info"><div class="card-name">${user.username}</div><div class="card-sub">${user.email}</div></div>
+      <div class="card-actions">${actionHtml}</div>
+    </div>`;
+    document.getElementById('addFriendBtn')?.addEventListener('click', async () => {
+      await sendFriendRequest(user.uid, user.username);
+      renderSearch();
     });
+  };
 
-    showSignupLink.addEventListener('click', () => {
-        loginForm.classList.add('hidden');
-        signupForm.classList.remove('hidden');
-        authError.textContent = '';
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+}
+
+// ── REQUESTS ──
+async function renderRequests() {
+  setHead('📬 Friend Requests');
+  contentBody.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  const q = query(collection(db, 'friendRequests'), where('toUserId', '==', currentUser.uid), where('status', '==', 'pending'));
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    contentBody.innerHTML = '<div class="empty-state"><div class="empty-icon">📬</div>No pending requests</div>';
+    return;
+  }
+  let html = '';
+  snap.forEach(d => {
+    const r = d.data();
+    html += `<div class="card" data-rid="${d.id}" data-from="${r.fromUserId}">
+      <div class="avatar" style="width:40px;height:40px;font-size:14px">${getInitials(r.fromUsername)}</div>
+      <div class="card-info"><div class="card-name">${r.fromUsername}</div><div class="card-sub">Wants to be friends</div></div>
+      <div class="card-actions">
+        <button class="btn btn-sm btn-green accept-req">Accept</button>
+        <button class="btn btn-sm btn-red reject-req">Reject</button>
+      </div>
+    </div>`;
+  });
+  contentBody.innerHTML = html;
+  contentBody.querySelectorAll('.accept-req').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('[data-rid]');
+      btn.disabled = true;
+      await acceptFriendRequest(card.dataset.rid, card.dataset.from, currentUser.uid);
+      showToast('✅ Friend accepted!');
+      renderRequests();
     });
-    showLoginLink.addEventListener('click', () => {
-        signupForm.classList.add('hidden');
-        loginForm.classList.remove('hidden');
-        authError.textContent = '';
+  });
+  contentBody.querySelectorAll('.reject-req').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const card = btn.closest('[data-rid]');
+      await rejectFriendRequest(card.dataset.rid);
+      showToast('❌ Request rejected');
+      renderRequests();
     });
+  });
+}
 
-    async function saveUserToFirestore(userId, email, username) {
-        await setDoc(doc(db, 'users', userId), {
-            email: email,
-            username: username,
-            createdAt: serverTimestamp(),
-            friends: [],
-            privacy: { lastSeen: true, readReceipts: true }
-        });
+// ── CHAT ──
+function openChat(userId, username) {
+  setHead(`<div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;font-size:12px">${getInitials(username)}</div><span>${username}</span></div>`, true);
+  contentBody.innerHTML = `<div class="chat-wrap">
+    <div id="chatMsgs" class="chat-messages"></div>
+    <div class="chat-input-bar">
+      <label class="attach-btn">📎<input type="file" id="mediaInput" accept="image/*,video/*" style="display:none"></label>
+      <input type="text" id="chatInput" placeholder="Message ${username}…">
+      <button class="send-btn" id="sendBtn">➤</button>
+    </div>
+  </div>`;
+
+  const chatId = [currentUser.uid, userId].sort().join('_');
+  const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
+  if (unsubMessages) unsubMessages();
+  unsubMessages = onSnapshot(q, snap => {
+    const box = document.getElementById('chatMsgs');
+    if (!box) return;
+    box.innerHTML = '';
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state" style="height:100%"><div class="empty-icon">👋</div>Say hello!</div>';
+      return;
     }
-
-    async function getUserByUsername(username) {
-        const q = query(collection(db, 'users'), where('username', '==', username));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-        return null;
-    }
-
-    async function getUserById(userId) {
-        const docSnap = await getDoc(doc(db, 'users', userId));
-        if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() };
-        return null;
-    }
-
-    async function sendFriendRequest(toUserId, toUsername) {
-        const requestId = `${currentUser.uid}_${toUserId}`;
-        await setDoc(doc(db, 'friendRequests', requestId), {
-            fromUserId: currentUser.uid,
-            fromUsername: currentUser.username,
-            toUserId: toUserId,
-            toUsername: toUsername,
-            status: 'pending',
-            createdAt: serverTimestamp()
-        });
-        console.log('Request sent to:', toUsername);
-    }
-
-    async function acceptFriendRequest(requestId, fromUserId, toUserId) {
-        await updateDoc(doc(db, 'users', fromUserId), { friends: arrayUnion(toUserId) });
-        await updateDoc(doc(db, 'users', toUserId), { friends: arrayUnion(fromUserId) });
-        await deleteDoc(doc(db, 'friendRequests', requestId));
-    }
-
-    async function rejectFriendRequest(requestId) {
-        await deleteDoc(doc(db, 'friendRequests', requestId));
-    }
-
-    async function sendMessage(toUserId, text, mediaUrl = null, mediaType = null) {
-        const chatId = [currentUser.uid, toUserId].sort().join('_');
-        await addDoc(collection(db, 'chats', chatId, 'messages'), {
-            text: text || '',
-            mediaUrl: mediaUrl,
-            mediaType: mediaType,
-            senderId: currentUser.uid,
-            senderName: currentUser.username,
-            timestamp: serverTimestamp()
-        });
-    }
-
-    async function uploadMedia(file) {
-        const storageRef = ref(storage, `media/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        return await getDownloadURL(storageRef);
-    }
-
-    async function loadConvosList() {
-        contentHeader.innerHTML = '<h2>Convos</h2>';
-        contentBody.innerHTML = '<div class="empty-state">Loading...</div>';
-        const friends = currentUser.friends || [];
-        if (friends.length === 0) {
-            contentBody.innerHTML = '<div class="empty-state">No conversations yet. Add friends to start chatting!</div>';
-            return;
-        }
-        let html = '';
-        for (const friendId of friends) {
-            const friend = await getUserById(friendId);
-            if (friend) {
-                html += `<div class="user-card" data-userid="${friend.id}" data-username="${friend.username}">
-                    <div><div class="username">${friend.username}</div></div>
-                    <button class="chat-btn">Chat</button>
-                </div>`;
-            }
-        }
-        contentBody.innerHTML = html;
-        document.querySelectorAll('.chat-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const card = btn.closest('.user-card');
-                openChat(card.dataset.userid, card.dataset.username);
-            });
-        });
-    }
-
-    function openChat(userId, username) {
-        currentChatUser = { id: userId, username: username };
-        contentHeader.innerHTML = `<h2>Chat with ${username}</h2><button id="backToConvos" style="width:auto; padding:6px 12px;">← Back</button>`;
-        document.getElementById('backToConvos')?.addEventListener('click', () => { loadConvosList(); if(unsubscribeMessages) unsubscribeMessages(); currentChatUser = null; });
-        contentBody.innerHTML = `<div id="chatMessages" class="chat-messages"></div>
-            <div class="chat-input-area">
-                <label class="file-label">📎<input type="file" id="mediaInput" accept="image/*,video/*" style="display:none"></label>
-                <input type="text" id="chatMessageInput" placeholder="Type a message...">
-                <button id="sendChatBtn">Send</button>
-            </div>`;
-        const chatId = [currentUser.uid, userId].sort().join('_');
-        const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'));
-        if (unsubscribeMessages) unsubscribeMessages();
-        unsubscribeMessages = onSnapshot(q, (snapshot) => {
-            const messagesDiv = document.getElementById('chatMessages');
-            if (!messagesDiv) return;
-            messagesDiv.innerHTML = '';
-            snapshot.forEach(doc => {
-                const msg = doc.data();
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
-                if (msg.mediaUrl && msg.mediaType === 'video') {
-                    const video = document.createElement('video');
-                    video.src = msg.mediaUrl;
-                    video.controls = true;
-                    video.className = 'message-video';
-                    msgDiv.appendChild(video);
-                } else if (msg.mediaUrl) {
-                    const img = document.createElement('img');
-                    img.src = msg.mediaUrl;
-                    img.className = 'message-img';
-                    img.onclick = () => window.open(msg.mediaUrl);
-                    msgDiv.appendChild(img);
-                }
-                if (msg.text) {
-                    const textSpan = document.createElement('div');
-                    textSpan.className = 'text';
-                    textSpan.textContent = msg.text;
-                    msgDiv.appendChild(textSpan);
-                }
-                const timeSpan = document.createElement('div');
-                timeSpan.className = 'time';
-                if (msg.timestamp) timeSpan.textContent = msg.timestamp.toDate().toLocaleTimeString();
-                msgDiv.appendChild(timeSpan);
-                messagesDiv.appendChild(msgDiv);
-            });
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        });
-        const sendBtn = document.getElementById('sendChatBtn');
-        const messageInput = document.getElementById('chatMessageInput');
-        const mediaInput = document.getElementById('mediaInput');
-        sendBtn.addEventListener('click', async () => {
-            const text = messageInput.value.trim();
-            if (text) { await sendMessage(userId, text); messageInput.value = ''; }
-        });
-        messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
-        mediaInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const mediaUrl = await uploadMedia(file);
-                const mediaType = file.type.startsWith('video') ? 'video' : 'image';
-                await sendMessage(userId, '', mediaUrl, mediaType);
-                mediaInput.value = '';
-            }
-        });
-    }
-
-    async function loadPeps() {
-        contentHeader.innerHTML = '<h2>👥 Peps</h2>';
-        const friends = currentUser.friends || [];
-        if (friends.length === 0) { contentBody.innerHTML = '<div class="empty-state">No friends yet. Search and add people!</div>'; return; }
-        let html = '';
-        for (const friendId of friends) {
-            const friend = await getUserById(friendId);
-            if (friend) html += `<div class="user-card"><div><div class="username">${friend.username}</div></div><button class="chat-from-peps" data-userid="${friend.id}" data-username="${friend.username}">Chat</button></div>`;
-        }
-        contentBody.innerHTML = html;
-        document.querySelectorAll('.chat-from-peps').forEach(btn => {
-            btn.addEventListener('click', () => openChat(btn.dataset.userid, btn.dataset.username));
-        });
-    }
-
-    async function loadSearch() {
-        contentHeader.innerHTML = '<h2>🔍 Search Users</h2>';
-        contentBody.innerHTML = `<div class="search-box"><input type="text" id="searchInput" placeholder="Search by username (e.g., @alex)"><button id="searchBtn">Search</button></div><div id="searchResults"></div>`;
-        document.getElementById('searchBtn').addEventListener('click', async () => {
-            const searchTerm = document.getElementById('searchInput').value.trim();
-            const resultsDiv = document.getElementById('searchResults');
-            if (!searchTerm) { resultsDiv.innerHTML = '<div class="empty-state">Enter a username</div>'; return; }
-            const user = await getUserByUsername(searchTerm);
-            if (!user || user.id === currentUser.uid) { resultsDiv.innerHTML = '<div class="empty-state">No user found</div>'; return; }
-            const isFriend = currentUser.friends?.includes(user.id);
-            const requestDoc = await getDoc(doc(db, 'friendRequests', `${currentUser.uid}_${user.id}`));
-            const isRequestSent = requestDoc.exists();
-            resultsDiv.innerHTML = `<div class="user-card"><div><div class="username">${user.username}</div><div class="email">${user.email}</div></div>
-                ${!isFriend && !isRequestSent ? `<button id="addFriendBtn">Add Friend</button>` : isRequestSent ? '<span style="color:#22C55E;">Request sent</span>' : '<span style="color:#22C55E;">Friend</span>'}</div>`;
-            if (!isFriend && !isRequestSent) {
-                document.getElementById('addFriendBtn')?.addEventListener('click', async () => {
-                    await sendFriendRequest(user.id, user.username);
-                    resultsDiv.innerHTML = '<div class="empty-state">Friend request sent!</div>';
-                });
-            }
-        });
-    }
-
-    async function loadRequests() {
-        contentHeader.innerHTML = '<h2>📬 Friend Requests</h2>';
-        contentBody.innerHTML = '<div class="empty-state">Loading...</div>';
-        const q = query(collection(db, 'friendRequests'), where('toUserId', '==', currentUser.uid), where('status', '==', 'pending'));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) { contentBody.innerHTML = '<div class="empty-state">No pending requests</div>'; return; }
-        let html = '';
-        snapshot.forEach(doc => {
-            const req = doc.data();
-            html += `<div class="request-card" data-requestid="${doc.id}" data-fromuserid="${req.fromUserId}">
-                <div><div class="username">${req.fromUsername}</div></div>
-                <div class="request-buttons"><button class="accept-btn">Accept</button><button class="reject-btn">Reject</button></div>
-            </div>`;
-        });
-        contentBody.innerHTML = html;
-        document.querySelectorAll('.accept-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const card = btn.closest('.request-card');
-                await acceptFriendRequest(card.dataset.requestid, card.dataset.fromuserid, currentUser.uid);
-                loadRequests();
-                loadConvosList();
-            });
-        });
-        document.querySelectorAll('.reject-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const card = btn.closest('.request-card');
-                await rejectFriendRequest(card.dataset.requestid);
-                loadRequests();
-            });
-        });
-    }
-
-    function loadSettings() {
-        contentHeader.innerHTML = '<h2>⚙️ Settings</h2>';
-        contentBody.innerHTML = `<div class="setting-item"><label>Username</label><input type="text" id="settingsUsername" value="${currentUser.username}"><button id="updateUsernameBtn">Update Username</button></div>
-            <div class="setting-item"><label>Email</label><input type="email" id="settingsEmail" value="${currentUser.email}" disabled></div>
-            <button id="deleteAccountBtn" class="delete-btn">Delete Account</button>`;
-        document.getElementById('updateUsernameBtn')?.addEventListener('click', async () => {
-            const newUsername = document.getElementById('settingsUsername').value.trim();
-            if (newUsername && newUsername.startsWith('@')) {
-                await updateDoc(doc(db, 'users', currentUser.uid), { username: newUsername });
-                currentUser.username = newUsername;
-                navUsername.textContent = newUsername;
-                alert('Username updated!');
-            } else alert('Username must start with @');
-        });
-        document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
-            if (confirm('Delete account permanently?')) {
-                await deleteDoc(doc(db, 'users', currentUser.uid));
-                await auth.currentUser.delete();
-                signOut(auth);
-            }
-        });
-    }
-
-    function loadPrivacy() {
-        contentHeader.innerHTML = '<h2>🔐 Privacy</h2>';
-        const privacy = currentUser.privacy || { lastSeen: true, readReceipts: true };
-        contentBody.innerHTML = `<div class="privacy-item"><span>Show Last Seen</span><label class="switch"><input type="checkbox" id="lastSeenToggle" ${privacy.lastSeen ? 'checked' : ''}><span class="slider"></span></label></div>
-            <div class="privacy-item"><span>Read Receipts</span><label class="switch"><input type="checkbox" id="readReceiptsToggle" ${privacy.readReceipts ? 'checked' : ''}><span class="slider"></span></label></div>`;
-        document.getElementById('lastSeenToggle')?.addEventListener('change', async (e) => {
-            await updateDoc(doc(db, 'users', currentUser.uid), { privacy: { ...privacy, lastSeen: e.target.checked } });
-        });
-        document.getElementById('readReceiptsToggle')?.addEventListener('change', async (e) => {
-            await updateDoc(doc(db, 'users', currentUser.uid), { privacy: { ...privacy, readReceipts: e.target.checked } });
-        });
-    }
-
-    menuPrivacy.addEventListener('click', () => { loadPrivacy(); dropdownMenu.classList.remove('show'); });
-    menuSettings.addEventListener('click', () => { loadSettings(); dropdownMenu.classList.remove('show'); });
-    menuLogout.addEventListener('click', async () => { await signOut(auth); if(unsubscribeMessages) unsubscribeMessages(); });
-
-    document.querySelectorAll('.sidebar-tab').forEach(tab => {
-        tab.addEventListener('click', async () => {
-            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const tabName = tab.dataset.tab;
-            if (tabName === 'convos') await loadConvosList();
-            else if (tabName === 'peps') await loadPeps();
-            else if (tabName === 'search') await loadSearch();
-            else if (tabName === 'requests') await loadRequests();
-        });
-    });
-
-    signupBtn.addEventListener('click', async () => {
-        const username = document.getElementById('signupUsername').value.trim();
-        const email = document.getElementById('signupEmail').value.trim();
-        const password = document.getElementById('signupPassword').value;
-        if (!username || !email || !password) { authError.textContent = 'All fields required'; return; }
-        if (!username.startsWith('@')) { authError.textContent = 'Username must start with @'; return; }
-        if (password.length < 6) { authError.textContent = 'Password must be at least 6 characters'; return; }
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await saveUserToFirestore(userCredential.user.uid, email, username);
-        } catch (error) { authError.textContent = error.message; }
-    });
-
-    loginBtn.addEventListener('click', async () => {
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        if (!email || !password) { authError.textContent = 'Email and password required'; return; }
-        try { await signInWithEmailAndPassword(auth, email, password); } 
-        catch (error) { authError.textContent = error.message; }
-    });
-
-    googleBtn.addEventListener('click', async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-            if (!userDoc.exists()) {
-                const username = '@' + result.user.email.split('@')[0];
-                await saveUserToFirestore(result.user.uid, result.user.email, username);
-            }
-        } catch (error) { authError.textContent = error.message; }
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
-                currentUser = { id: user.uid, ...userDoc.data() };
-                navUsername.textContent = currentUser.username;
-                authSection.style.display = 'none';
-                appContainer.style.display = 'flex';
-                document.querySelector('.sidebar-tab[data-tab="convos"]').click();
-            }
+    snap.forEach(d => {
+      const m = d.data();
+      const sent = m.senderId === currentUser.uid;
+      const div = document.createElement('div');
+      div.className = `msg ${sent ? 'sent' : 'recv'}`;
+      if (m.mediaUrl) {
+        if (m.mediaType === 'video') {
+          const v = document.createElement('video');
+          v.src = m.mediaUrl; v.controls = true; v.className = 'msg-video';
+          div.appendChild(v);
         } else {
-            authSection.style.display = 'flex';
-            appContainer.style.display = 'none';
-            currentUser = null;
-            if (unsubscribeMessages) unsubscribeMessages();
+          const img = document.createElement('img');
+          img.src = m.mediaUrl; img.className = 'msg-media';
+          img.onclick = () => window.open(m.mediaUrl);
+          div.appendChild(img);
         }
+      }
+      if (m.text) {
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.textContent = m.text;
+        div.appendChild(bubble);
+      }
+      const time = document.createElement('div');
+      time.className = 'msg-time';
+      time.textContent = m.timestamp ? m.timestamp.toDate().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+      div.appendChild(time);
+      box.appendChild(div);
     });
+    box.scrollTop = box.scrollHeight;
+  });
+
+  const chatInput = document.getElementById('chatInput');
+  document.getElementById('sendBtn').addEventListener('click', async () => {
+    const text = chatInput.value.trim();
+    if (text) { await sendMessage(userId, text); chatInput.value = ''; }
+  });
+  chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('sendBtn').click(); } });
+  document.getElementById('mediaInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast('⬆️ Uploading…');
+    const url = await uploadMedia(file);
+    const type = file.type.startsWith('video') ? 'video' : 'image';
+    await sendMessage(userId, '', url, type);
+    e.target.value = '';
+  });
+}
+
+// ── SETTINGS ──
+function renderSettings() {
+  setHead('⚙️ Settings');
+  contentBody.innerHTML = `
+    <div class="settings-section">
+      <div class="settings-title">Profile</div>
+      <div class="settings-card">
+        <div class="settings-label">Username</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="text" id="newUsername" value="${currentUser.username}" style="flex:1;margin:0">
+          <button class="btn" style="width:auto;padding:12px 18px" id="updateUsernameBtn">Save</button>
+        </div>
+        <div id="usernameMsg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-label">Email</div>
+        <input type="email" value="${currentUser.email}" disabled style="margin:0">
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-title">Danger Zone</div>
+      <button class="btn btn-danger" id="deleteAccBtn">🗑️ Delete Account Permanently</button>
+    </div>`;
+
+  document.getElementById('updateUsernameBtn').addEventListener('click', async () => {
+    const val = document.getElementById('newUsername').value.trim();
+    const msg = document.getElementById('usernameMsg');
+    if (!val.startsWith('@')) { msg.style.color = 'var(--red)'; msg.textContent = 'Username must start with @'; return; }
+    if (val.length < 2) { msg.style.color = 'var(--red)'; msg.textContent = 'Too short'; return; }
+    try {
+      // FIX: update Firestore and then refresh local state
+      await updateDoc(doc(db, 'users', currentUser.uid), { username: val });
+      currentUser.username = val; // update local copy
+      updateAvatar(); // reflect in top bar
+      msg.style.color = 'var(--green)';
+      msg.textContent = '✓ Username updated!';
+      showToast('✅ Username updated!');
+    } catch (e) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = e.message;
+    }
+  });
+
+  document.getElementById('deleteAccBtn').addEventListener('click', async () => {
+    if (!confirm('This will permanently delete your account. Are you sure?')) return;
+    await deleteDoc(doc(db, 'users', currentUser.uid));
+    await auth.currentUser.delete();
+    await signOut(auth);
+  });
+}
+
+// ── PRIVACY ──
+function renderPrivacy() {
+  setHead('🔐 Privacy');
+  const p = currentUser.privacy || { lastSeen: true, readReceipts: true };
+  contentBody.innerHTML = `
+    <div class="settings-section">
+      <div class="settings-title">Visibility</div>
+      ${privacyRow('lastSeen', 'Show Last Seen', 'Let friends see when you were last active', p.lastSeen)}
+      ${privacyRow('readReceipts', 'Read Receipts', 'Let friends see when you read messages', p.readReceipts)}
+    </div>`;
+
+  ['lastSeen','readReceipts'].forEach(key => {
+    document.getElementById(key).addEventListener('change', async e => {
+      const updated = { ...(currentUser.privacy || {}), [key]: e.target.checked };
+      await updateDoc(doc(db, 'users', currentUser.uid), { privacy: updated });
+      currentUser.privacy = updated;
+      showToast('✓ Privacy updated');
+    });
+  });
+}
+
+function privacyRow(id, name, desc, checked) {
+  return `<div class="privacy-row">
+    <div class="privacy-info"><div class="privacy-name">${name}</div><div class="privacy-desc">${desc}</div></div>
+    <label class="toggle">
+      <input type="checkbox" id="${id}" ${checked ? 'checked' : ''}>
+      <div class="toggle-track"></div>
+      <div class="toggle-thumb"></div>
+    </label>
+  </div>`;
+}
+
+function setHead(html, isChat = false) {
+  contentHead.innerHTML = `<h2>${html}</h2>`;
+  if (unsubMessages && !isChat) { unsubMessages(); unsubMessages = null; }
+}
+
+function cleanup() {
+  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+  if (unsubRequests) { unsubRequests(); unsubRequests = null; }
+}
+
+// ── AUTH HANDLERS ──
+document.getElementById('signupBtn').addEventListener('click', async () => {
+  const username = document.getElementById('signupUsername').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  authError.textContent = '';
+  if (!username || !email || !password) { authError.textContent = 'All fields required.'; return; }
+  if (!username.startsWith('@')) { authError.textContent = 'Username must start with @'; return; }
+  if (password.length < 6) { authError.textContent = 'Password must be at least 6 characters.'; return; }
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await saveUser(cred.user.uid, email, username);
+  } catch (e) { authError.textContent = e.message; }
+});
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  authError.textContent = '';
+  if (!email || !password) { authError.textContent = 'Email and password required.'; return; }
+  try { await signInWithEmailAndPassword(auth, email, password); }
+  catch (e) { authError.textContent = e.message; }
+});
+
+document.getElementById('googleBtn').addEventListener('click', async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const snap = await getDoc(doc(db, 'users', result.user.uid));
+    if (!snap.exists()) {
+      const username = '@' + result.user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+      await saveUser(result.user.uid, result.user.email, username);
+    }
+  } catch (e) { authError.textContent = e.message; }
+});
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      currentUser = { uid: user.uid, ...snap.data() };
+      updateAvatar();
+      authWrap.style.display = 'none';
+      appWrap.style.display = 'flex';
+      watchRequestBadge();
+      renderConvos();
+      document.querySelector('.nav-item[data-tab="convos"]').classList.add('active');
+    }
+  } else {
+    cleanup();
+    authWrap.style.display = 'flex';
+    appWrap.style.display = 'none';
+    currentUser = null;
+  }
+});
 </script>
 </body>
 </html>
