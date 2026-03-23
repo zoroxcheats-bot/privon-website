@@ -590,8 +590,19 @@ document.querySelectorAll('.nav-btn').forEach(b=>{
   });
 });
 
+// ── IN-MEMORY CACHE ──
+const _userCache = {}; // uid → user data
+const _chatCache = {}; // chatId → chat meta
+let _cuLastRefresh = 0;
+
 // Firestore helpers
-async function refreshCU(){ const s=await getDoc(doc(db,'users',cu.uid)); if(s.exists()) cu={uid:cu.uid,...s.data()} }
+async function refreshCU(force=false){
+  const now = Date.now();
+  // Only re-fetch if stale (>30s) or forced
+  if(!force && now - _cuLastRefresh < 30000) return;
+  const s=await getDoc(doc(db,'users',cu.uid));
+  if(s.exists()){ cu={uid:cu.uid,...s.data()}; _cuLastRefresh=now; }
+}
 async function saveUser(uid,email,username,photoURL=''){
   await setDoc(doc(db,'users',uid),{
     email,username,photoURL,createdAt:serverTimestamp(),
@@ -600,7 +611,55 @@ async function saveUser(uid,email,username,photoURL=''){
   });
 }
 async function getByUsername(u){ const q=query(collection(db,'users'),where('username','==',u)); const s=await getDocs(q); return s.empty?null:{uid:s.docs[0].id,...s.docs[0].data()} }
-async function getById(id){ const s=await getDoc(doc(db,'users',id)); return s.exists()?{uid:s.id,...s.data()}:null }
+
+// Cached user fetch — avoids re-fetching same user repeatedly
+async function getById(id){
+  if(_userCache[id]) return _userCache[id];
+  const s=await getDoc(doc(db,'users',id));
+  if(s.exists()){ _userCache[id]={uid:s.id,...s.data()}; return _userCache[id]; }
+  return null;
+}
+
+// Batch fetch all friends at once instead of one by one
+async function getFriendsBatch(ids){
+  const missing = ids.filter(id=>!_userCache[id]);
+  if(missing.length){
+    // Fetch all missing in parallel
+    await Promise.all(missing.map(async id=>{
+      const s=await getDoc(doc(db,'users',id));
+      if(s.exists()) _userCache[id]={uid:s.id,...s.data()};
+    }));
+  }
+  return ids.map(id=>_userCache[id]).filter(Boolean);
+}
+
+// Batch fetch chat metas in parallel
+async function getChatMetasBatch(friendIds){
+  const missing = friendIds.filter(fid=>{
+    const chatId=[cu.uid,fid].sort().join('_');
+    return !_chatCache[chatId];
+  });
+  if(missing.length){
+    await Promise.all(missing.map(async fid=>{
+      const chatId=[cu.uid,fid].sort().join('_');
+      try{
+        const s=await getDoc(doc(db,'chats',chatId));
+        _chatCache[chatId] = s.exists()?{...s.data(),chatId}:{chatId};
+      }catch(e){ _chatCache[[cu.uid,fid].sort().join('_')]={chatId:[cu.uid,fid].sort().join('_')} }
+    }));
+  }
+  return friendIds.reduce((acc,fid)=>{
+    const chatId=[cu.uid,fid].sort().join('_');
+    acc[fid]=_chatCache[chatId]||{};
+    return acc;
+  },{});
+}
+
+// Invalidate cache for a specific chat (after sending msg)
+function invalidateChatCache(toId){
+  const chatId=[cu.uid,toId].sort().join('_');
+  delete _chatCache[chatId];
+}
 function initials(u){ return u?u.replace('@','').slice(0,2).toUpperCase():'??' }
 function avHtml(user,cls=''){
   const style=user?.photoURL?'style="background:none"':'';
@@ -679,13 +738,16 @@ async function sendMsg(toId,text,mediaUrl,mediaType){
   };
   if(mediaUrl){ msgData.mediaUrl=mediaUrl; msgData.mediaType=mediaType||'image' }
   await addDoc(collection(db,'chats',chatId,'messages'),msgData);
+  const chatSnap=await getDoc(doc(db,'chats',chatId));
+  const prevUnread=chatSnap.data()?.[`unread_${toId}`]||0;
   await setDoc(doc(db,'chats',chatId),{
     participants:[cu.uid,toId],
     lastMessage:text||(mediaType==='video'?'🎥 Video':'📷 Photo'),
     lastSender:cu.uid,
     updatedAt:serverTimestamp(),
-    [`unread_${toId}`]: (await getDoc(doc(db,'chats',chatId))).data()?.[`unread_${toId}`]+1||1
+    [`unread_${toId}`]: prevUnread+1
   },{merge:true});
+  invalidateChatCache(toId); // refresh cache for this chat
 }
 
 // FIX: Upload using uploadBytesResumable with progress — solves "uploading forever"
@@ -726,6 +788,7 @@ async function markRead(toId){
   const chatId=[cu.uid,toId].sort().join('_');
   try{
     await updateDoc(doc(db,'chats',chatId),{[`unread_${cu.uid}`]:0});
+    invalidateChatCache(toId);
   }catch(e){}
 }
 
@@ -738,23 +801,29 @@ async function postMoment(data){
   });
   toast$('✨ Moment posted!');
 }
+// Moments - parallel fetch
 async function getFriendMoments(){
   await refreshCU();
   const friends=cu.friends||[];
-  const now=new Date(); const all=[];
-  for(const fid of [...friends,cu.uid]){
+  const now=new Date();
+  const allIds=[...friends,cu.uid];
+  // Fetch all in parallel
+  const results = await Promise.all(allIds.map(async fid=>{
     const q=query(collection(db,'moments'),where('authorId','==',fid));
     const s=await getDocs(q);
+    const items=[];
     s.forEach(d=>{
       const m={id:d.id,...d.data()};
       if(m.expiresAt&&m.expiresAt.toDate()>now){
-        if(m.privacy==='all'||m.authorId===cu.uid) all.push(m);
-        else if(m.privacy==='close'&&(cu.closeFriends||[]).includes(m.authorId)) all.push(m);
-        else if(m.privacy==='custom'&&m.allowList?.includes(cu.uid)) all.push(m);
-        else if(m.privacy==='hidden'&&!m.hideFrom?.includes(cu.uid)) all.push(m);
+        if(m.privacy==='all'||m.authorId===cu.uid) items.push(m);
+        else if(m.privacy==='close'&&(cu.closeFriends||[]).includes(m.authorId)) items.push(m);
+        else if(m.privacy==='custom'&&m.allowList?.includes(cu.uid)) items.push(m);
+        else if(m.privacy==='hidden'&&!m.hideFrom?.includes(cu.uid)) items.push(m);
       }
     });
-  }
+    return items;
+  }));
+  const all=results.flat();
   all.sort((a,b)=>b.createdAt?.seconds-a.createdAt?.seconds);
   return all;
 }
@@ -768,16 +837,19 @@ async function addReaction(mid,emoji){
   toast$(`${emoji} Reacted!`);
 }
 
-// Stories bar
+// Stories bar - uses cache
 async function renderStoriesBar(){
   const moments=await getFriendMoments();
   const byUser={};
   moments.forEach(m=>{ if(!byUser[m.authorId]) byUser[m.authorId]=[]; byUser[m.authorId].push(m) });
+  // Pre-fetch all story authors in parallel
+  const authorIds=Object.keys(byUser);
+  if(authorIds.length) await getFriendsBatch(authorIds);
   let html=`<div class="story-item" id="addStoryBtn">
     <div class="story-ring add-btn" style="position:relative"><div class="story-inner">＋</div><div class="story-add-plus">+</div></div>
     <div class="story-name">Add</div></div>`;
   for(const [uid,ums] of Object.entries(byUser)){
-    const u=await getById(uid); if(!u) continue;
+    const u=_userCache[uid]; if(!u) continue;
     const seen=ums.every(m=>m.views&&m.views.includes(cu.uid));
     const inner=u.photoURL?`<img src="${u.photoURL}">`:`<span style="font-weight:700;font-size:12px;color:#fff">${initials(u.username)}</span>`;
     html+=`<div class="story-item" data-story-uid="${uid}">
@@ -791,38 +863,31 @@ async function renderStoriesBar(){
   document.querySelectorAll('[data-story-uid]').forEach(el=>el.addEventListener('click',()=>openMomentViewer(byUser[el.dataset.storyUid])));
 }
 
-// ── CONVOS (with search, tabs, sort by latest, unread badges)
+// ── CONVOS (batch fetch, cached, fast)
 async function renderConvos(){
   activeChat=null; setHead('💬 Convos');
+  // Show skeleton immediately
   cBody.innerHTML='<div class="empty"><div class="spinner"></div></div>';
-  await renderStoriesBar(); await refreshCU();
+  await renderStoriesBar();
+  await refreshCU(); // uses cache, only fetches if stale
   const friends=cu.friends||[];
   if(!friends.length){
     cBody.innerHTML='<div class="empty"><div class="empty-ico">💬</div>No conversations yet.<br>Add friends to start!</div>';
     return;
   }
-  // Fetch chat metadata for sorting + last message
-  const chatMetas = {};
-  for(const fid of friends){
-    const chatId=[cu.uid,fid].sort().join('_');
-    try{
-      const s=await getDoc(doc(db,'chats',chatId));
-      if(s.exists()) chatMetas[fid]={...s.data(),chatId};
-    } catch(e){}
-  }
-  // Fetch friend info
-  const friendDatas = {};
-  for(const fid of friends){
-    const f=await getById(fid);
-    if(f) friendDatas[fid]=f;
-  }
+  // Batch fetch friends + chat metas in parallel — much faster
+  const [friendDatas, chatMetas] = await Promise.all([
+    getFriendsBatch(friends).then(arr=>{
+      const map={};arr.forEach(f=>{map[f.uid]=f});return map;
+    }),
+    getChatMetasBatch(friends)
+  ]);
   // Sort by updatedAt desc
   const sorted=[...friends].sort((a,b)=>{
     const ta=chatMetas[a]?.updatedAt?.seconds||0;
     const tb=chatMetas[b]?.updatedAt?.seconds||0;
     return tb-ta;
   });
-  // Build HTML
   const tags=cu.chatTags||{};
   let html=`<div class="convo-search"><span class="s-ico">🔍</span><input type="text" id="convoSearchInp" placeholder="Search conversations…" value="${convoSearchVal}"></div>
   <div class="chat-tabs">
@@ -832,15 +897,12 @@ async function renderConvos(){
     <div class="chat-tab ${activeChatFilter==='groups'?'active':''}" data-filter="groups">Groups</div>
   </div>
   <div class="convo-list">`;
-
   let anyShown=false;
   for(const fid of sorted){
     const f=friendDatas[fid]; if(!f) continue;
-    // Filter by tab
     const tag=tags[fid]||'personal';
     if(activeChatFilter!=='all'&&activeChatFilter!=='groups'&&tag!==activeChatFilter) continue;
-    if(activeChatFilter==='groups') continue; // groups = future feature, skip for now
-    // Filter by search
+    if(activeChatFilter==='groups') continue;
     if(convoSearchVal&&!f.username.toLowerCase().includes(convoSearchVal.toLowerCase())) continue;
     anyShown=true;
     const meta=chatMetas[fid];
@@ -849,10 +911,7 @@ async function renderConvos(){
     const unread=meta?.[`unread_${cu.uid}`]||0;
     const isUnread=unread>0;
     html+=`<div class="convo-item ${isUnread?'unread-item':''}" data-open="${f.uid}" data-name="${f.username}">
-      <div class="convo-av">
-        ${avHtml(f,'av-lg')}
-        <span class="online-dot"></span>
-      </div>
+      <div class="convo-av">${avHtml(f,'av-lg')}<span class="online-dot"></span></div>
       <div class="convo-info">
         <div class="convo-top">
           <div class="convo-name ${isUnread?'unread-name':''}">${f.username}</div>
@@ -868,16 +927,12 @@ async function renderConvos(){
   if(!anyShown) html+=`<div class="empty" style="min-height:120px;padding-top:30px"><div class="empty-ico">💬</div>No chats found</div>`;
   html+='</div>';
   cBody.innerHTML=html;
-
-  // Search input
   document.getElementById('convoSearchInp')?.addEventListener('input',e=>{
     convoSearchVal=e.target.value; renderConvos();
   });
-  // Tab filters
   document.querySelectorAll('.chat-tab').forEach(t=>{
     t.addEventListener('click',()=>{ activeChatFilter=t.dataset.filter; renderConvos() });
   });
-  // Open chat
   cBody.querySelectorAll('.convo-item').forEach(el=>{
     el.addEventListener('click',()=>openChat(el.dataset.open,el.dataset.name));
   });
@@ -926,10 +981,10 @@ async function renderPeps(){
   await refreshCU();
   const friends=cu.friends||[];
   if(!friends.length){ cBody.innerHTML='<div class="empty"><div class="empty-ico">👥</div>No friends yet.</div>'; return }
+  const allFriends = await getFriendsBatch(friends);
   let html='<div class="padded">';
-  for(const fid of friends){
-    const f=await getById(fid);
-    if(f) html+=`<div class="card">${avHtml(f,'av-lg')}
+  for(const f of allFriends){
+    html+=`<div class="card">${avHtml(f,'av-lg')}
       <div class="card-info"><div class="card-name">${f.username}</div><div class="card-sub">${f.email}</div></div>
       <div class="card-actions"><button class="btn btn-sm" data-cuid="${f.uid}" data-cname="${f.username}">Chat</button></div></div>`;
   }
